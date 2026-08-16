@@ -15,8 +15,8 @@ The app has no router. Which view you see is decided entirely by what is in
 | present, a question unanswered| `<CardViewer/>` | The recipient, answering     |
 | present, all answered         | `<CardResult/>` | The sender, seeing the replies |
 
-The round trip is: sender generates a link → recipient opens it, breaks the
-seal, and answers the questions **one at a time** → recipient copies the *new*
+The round trip is: sender generates a link → recipient opens it, plays out
+whichever delivery the sender chose, and answers the questions **one at a time** → recipient copies the *new*
 link the app generates → sender opens that and sees the answers.
 
 Questions are presented singly rather than as a form. A card is a conversation,
@@ -32,7 +32,7 @@ Keys are single letters to keep the encoded link short:
 
 ```json
 {
-  "t": "leader",
+  "t": "env",
   "q": [
     { "p": "Will you attend the meeting?", "k": "c", "o": ["Yes", "No"], "a": "" },
     { "p": "When are you available?", "k": "dt", "a": "" }
@@ -120,7 +120,7 @@ succeed but the live page is blank, check this setting first — a
 ```
 src/
 ├── App.jsx                    # reads the hash, picks the view
-├── constants.js               # input limits, question kinds, role accents
+├── constants.js               # limits, question kinds, delivery styles
 ├── index.css                  # imports tailwind, brand tokens, app layer
 ├── assets/
 │   └── semper-mark.png        # emblem, cream backdrop keyed to transparency
@@ -128,11 +128,13 @@ src/
 │   ├── semper-tokens.css      # MIRROR of the v1.2 brand tokens — read-only
 │   └── justasking.css         # this app's layer, in terms of those tokens
 ├── components/
-│   ├── Layout.jsx             # page shell, applies the role accent
+│   ├── Layout.jsx             # page shell, header and footer
 │   ├── BrandHeader.jsx        # emblem, wordmark, light/dark control
 │   ├── BrandFooter.jsx        # scarlet rule, disclaimer, build stamp
 │   ├── QuestionEditor.jsx     # one question in the creator's draft
-│   ├── SealedDispatch.jsx     # the wax seal the recipient breaks
+│   ├── Delivery.jsx           # holds the questions until the reader opens it
+│   ├── DeliveryStage.jsx      # the scenery, shared with the preview
+│   ├── DeliveryPreview.jsx    # what the sender is choosing, to scale
 │   ├── ShareLink.jsx          # read-only link field with copy button
 │   ├── CardCreator.jsx        # build a card, generate a link
 │   ├── CardViewer.jsx         # answer a card, generate the reply link
