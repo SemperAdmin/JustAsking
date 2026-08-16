@@ -54,6 +54,25 @@ npm run preview  # serve the production build
 The build uses relative asset paths, so `dist/` can be dropped on any static
 host — or opened straight from the filesystem.
 
+## Deployment
+
+Live at <https://semperadmin.github.io/JustAsking/>, published by
+`.github/workflows/deploy.yml` on every push to `main`.
+
+**Settings → Pages → Source must be set to "GitHub Actions."** This is not
+optional and is easy to get wrong, because the alternative setting looks like it
+should work. With "Deploy from a branch → main → /(root)", GitHub publishes the
+repository files verbatim, and the root `index.html` is Vite's entry point — it
+points at `/src/main.jsx`, which is JSX the browser cannot execute. The result
+is a blank page.
+
+Worse, that setting is not merely wrong but actively competing: both builders
+run on each push, and GitHub's branch builder tends to finish last and overwrite
+the built site. The workflow reports success either way, so the Actions tab
+looks healthy while the published site is wrong. If a deploy ever appears to
+succeed but the live page is blank, check this setting first — a
+`pages build and deployment` run in the Actions tab means it has reverted.
+
 ## Project layout
 
 ```
