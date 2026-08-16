@@ -1,0 +1,55 @@
+@import 'tailwindcss';
+@import './themes.css';
+
+/* Expose the theme tokens to Tailwind so utilities like `bg-surface`,
+ * `text-muted` and `rounded-card` resolve straight to the active palette. */
+@theme inline {
+  --color-page: var(--ja-page);
+  --color-page-accent: var(--ja-page-accent);
+  --color-surface: var(--ja-surface);
+  --color-edge: var(--ja-border);
+  --color-ink: var(--ja-text);
+  --color-muted: var(--ja-muted);
+  --color-accent: var(--ja-accent);
+  --color-accent-hover: var(--ja-accent-hover);
+  --color-accent-contrast: var(--ja-accent-contrast);
+  --color-accent-soft: var(--ja-accent-soft);
+  --radius-card: var(--ja-radius);
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--ja-font);
+  color: var(--ja-text);
+  background: linear-gradient(160deg, var(--ja-page) 0%, var(--ja-page-accent) 100%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The theme can change mid-session (the creator previews as they type), so
+ * soften the swap rather than letting the page flash. */
+body,
+.ja-themed {
+  transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--ja-accent);
+  outline-offset: 2px;
+}
