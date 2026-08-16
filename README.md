@@ -40,7 +40,7 @@ Keys are single letters to keep the encoded link short:
 }
 ```
 
-- `t` — role accent, one of `marine`, `leader`, `commander`, `admin`
+- `t` — delivery style, one of `env`, `stamp`, `wire`, `scroll`
 - `q` — 1 to 5 questions, each with:
   - `p` — the prompt (max 160 characters)
   - `k` — kind: `c` choice, `x` free text, `d` date, `dt` date and time
@@ -60,10 +60,10 @@ That JSON is `JSON.stringify`'d, compressed with
 
 ### Backward compatibility
 
-`q` used to be a single string with `o` and `a` beside it, and `t` used to carry
-free-form theme names. Links minted under either shape still open: the old
-payload is lifted into a one-question card, and an unrecognized accent falls
-back to `marine`.
+`q` used to be a single string with `o` and `a` beside it. `t` has meant three
+different things: a free-form theme name, then a role accent, now a delivery
+style. Links minted under any of those still open — the old payload is lifted
+into a one-question card, and an unrecognized `t` falls back to `env`.
 
 ### The URL budget
 
@@ -160,9 +160,6 @@ What that buys, from the style guide:
 - **Dark navy by default**, light parchment as the secondary toggle. The choice
   is remembered per reader and is deliberately *not* encoded in the card URL —
   it is the reader's preference, not the sender's to impose.
-- **Role accents.** Four roles, four colours, matched to the audience. The
-  sender picks who they are addressing and the card carries that accent. Every
-  component reads `--color-primary`, so none of them know roles exist.
 - **One display surface per fold.** Bebas Neue is rare and load-bearing: the
   hero on the creator, and the answer on the result — sized like the guide's
   stat-tile numeral, stepping down as the answer gets longer. A multi-question
@@ -176,6 +173,35 @@ The one derived value is the admin green's dark-mode variant, which the guide
 does not name. It is produced with `color-mix()` from `--color-role-admin`
 rather than hardcoded, so it tracks the token instead of becoming a sixth hex
 the style guide does not own.
+
+## Delivery styles
+
+The sender picks how the card arrives, and that is what the recipient meets
+before any question appears:
+
+| `t` | Style | Signature | Runs for |
+| --- | --- | --- | --- |
+| `env` | Sealed dispatch | Wax cracks, flap swings, letter slides out | 1180ms |
+| `stamp` | Stamped orders | A stamp lands hard and jolts the page | 940ms |
+| `wire` | Field transmission | A scan line crosses a dark panel, signal bars find strength | 1020ms |
+| `scroll` | Unrolled orders | The cord parts and the scroll unrolls between its rods | 1060ms |
+
+Four distinct motion signatures — a hinge and slide, an impact, an electronic
+scan, an unroll — so they read as different arrivals rather than recolours.
+
+This slot used to hold a role accent (marine / leader / commander / admin). It
+only ever re-pointed `--color-primary`, and the label was never shown to the
+person receiving the card, so the meaning stayed in the sender's head. It was
+borrowed from SemperAdminPortal, where the accent earns its place because the
+portal has role-differentiated *content*; JustAsking has none, so it was
+decoration wearing a semantic costume. The accent is now the brand primary
+throughout.
+
+Each style declares its own duration in `constants.js`, and that number has to
+stay in step with the CSS. Every animated element also declares `--dur`
+alongside its animation, which is what lets the reduced-motion opt-in re-enable
+all four sequences with a single rule instead of restating durations style by
+style.
 
 ### The one motion exception
 

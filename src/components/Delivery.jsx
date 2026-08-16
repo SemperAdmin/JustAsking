@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { deliveryOf } from '../constants'
 import { Card } from './Layout'
-
-/** How long the CSS sequence in justasking.css runs before the letter is out. */
-const SEQUENCE_MS = 1180
 
 const REDUCED_QUERY = '(prefers-reduced-motion: reduce)'
 const MOTION_KEY = 'justasking:motion'
@@ -18,22 +16,69 @@ function storedChoice() {
   }
 }
 
+/** The four stages. Markup only -- justasking.css drives every sequence. */
+const STAGES = {
+  env: () => (
+    <>
+      {/* Back to front: back panel, letter, front panel, flap, seal. */}
+      <div className="env__back" />
+      <div className="env__letter paper-ruled" />
+      <div className="env__front" />
+      <div className="env__flap" />
+      <div className="env__seal">
+        <span className="env__wax env__wax--l" aria-hidden="true">
+          <span className="env__sigil">SA</span>
+        </span>
+        <span className="env__wax env__wax--r" aria-hidden="true">
+          <span className="env__sigil">SA</span>
+        </span>
+      </div>
+    </>
+  ),
+  stamp: () => (
+    <>
+      <div className="stamp__page paper-ruled" />
+      <div className="stamp__mark">FOR ACTION</div>
+    </>
+  ),
+  wire: () => (
+    <div className="wire__panel">
+      <p className="wire__label">INCOMING</p>
+      <div className="wire__bars" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </div>
+      <div className="wire__scan" aria-hidden="true" />
+    </div>
+  ),
+  scroll: () => (
+    <>
+      <div className="scroll__body paper-ruled" />
+      <div className="scroll__rod scroll__rod--top" />
+      <div className="scroll__rod scroll__rod--bottom" />
+      <div className="scroll__cord" />
+    </>
+  ),
+}
+
 /**
- * Gates the recipient's questions behind a sealed envelope.
+ * Holds the recipient's questions behind whichever delivery the sender chose.
  *
- * The sequence plays by default for everyone, including readers whose device
- * asks for reduced motion. That is a deliberate override of
- * `prefers-reduced-motion`, made on the product owner's call and argued in the
- * README -- the short version being that most people who have the setting on
- * have it on for battery or taste, and this is a single user-initiated beat
- * rather than motion imposed on the way to somewhere else.
+ * Opening is a tap, not a timer. That is the whole reason this is allowed to
+ * run past the style guide's motion budget: nobody has motion imposed on them
+ * on the way to somewhere else, and the wait is something the recipient chose.
  *
- * It is an override, not a dismissal. A reader whose device asked for less
- * motion is told the seal animates and given one tap to turn it off, and that
- * choice is remembered. Some people have the setting on because animation makes
- * them ill, and they should not have to sit through this on every card.
+ * The sequence plays by default for everyone, including devices asking for
+ * reduced motion -- a deliberate override argued in the README. It stays an
+ * override rather than a dismissal: a reader whose device asked for less motion
+ * is told the card animates and given one tap to turn it off, remembered so
+ * they never sit through it twice.
  */
-export default function SealedDispatch({ children }) {
+export default function Delivery({ styleId, children }) {
+  const delivery = deliveryOf(styleId)
+  const Stage = STAGES[delivery.id] ?? STAGES.env
+
   const [phase, setPhase] = useState('sealed')
   const [choice, setChoice] = useState(storedChoice)
   const [reduced, setReduced] = useState(
@@ -56,11 +101,14 @@ export default function SealedDispatch({ children }) {
   // Animation is the default; only an explicit "skip" turns it off.
   const willAnimate = choice !== 'skip'
 
-  const open = useCallback((animate) => {
-    setPhase(animate ? 'opening' : 'open')
-    if (!animate) return
-    timerRef.current = setTimeout(() => setPhase('open'), SEQUENCE_MS)
-  }, [])
+  const open = useCallback(
+    (animate) => {
+      setPhase(animate ? 'opening' : 'open')
+      if (!animate) return
+      timerRef.current = setTimeout(() => setPhase('open'), delivery.ms)
+    },
+    [delivery.ms],
+  )
 
   /** Record a preference and act on it in the same tap. */
   function chooseAndOpen(mode) {
@@ -78,33 +126,20 @@ export default function SealedDispatch({ children }) {
   return (
     <Card
       className="text-center"
+      data-delivery={delivery.id}
       data-phase={phase}
       // Marks the subtree so the play block in justasking.css can override the
       // token mirror's blanket animation suppression on a reduced-motion device.
       data-motion={phase === 'opening' ? 'play' : undefined}
     >
-      <p className="eyebrow">Sealed dispatch</p>
+      <p className="eyebrow">{delivery.label}</p>
       <p className="mt-2 text-sm text-muted-foreground">
         Someone has addressed a question to you.
       </p>
 
-      <div className="dispatch mx-auto mt-6 max-w-xs">
-        {/* Stacked back to front: back panel, letter, front panel, flap, seal.
-         * The letter starts tucked behind the front panel, which is what makes
-         * it look like it came out of the envelope rather than off the top. */}
-        <div className="dispatch__envelope">
-          <div className="dispatch__back" />
-          <div className="dispatch__letter" />
-          <div className="dispatch__front" />
-          <div className="dispatch__flap" />
-          <div className="dispatch__seal">
-            <span className="dispatch__wax dispatch__wax--l" aria-hidden="true">
-              <span className="dispatch__sigil">SA</span>
-            </span>
-            <span className="dispatch__wax dispatch__wax--r" aria-hidden="true">
-              <span className="dispatch__sigil">SA</span>
-            </span>
-          </div>
+      <div className="delivery mx-auto mt-6 max-w-xs">
+        <div className="delivery__stage">
+          <Stage />
         </div>
       </div>
 
@@ -114,7 +149,7 @@ export default function SealedDispatch({ children }) {
         disabled={phase === 'opening'}
         className="mt-6 w-full rounded-button bg-primary px-4 py-3 font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-70"
       >
-        {phase === 'opening' ? 'Opening…' : 'Break the seal'}
+        {phase === 'opening' ? 'Opening…' : delivery.action}
       </button>
 
       {/* Only surfaced to readers whose device asked for less motion. Everyone

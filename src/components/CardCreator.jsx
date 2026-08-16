@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 
 import {
-  DEFAULT_ROLE,
+  DEFAULT_DELIVERY,
+  DELIVERIES,
   MAX_OPTIONS,
   MAX_QUESTIONS,
-  ROLES,
   URL_LENGTH_HARD_MAX,
 } from '../constants'
 import { createEmptyQuestion, encodeState, projectedAnsweredLength } from '../utils/urlState'
@@ -40,8 +40,8 @@ function finalize(question) {
  * The draft lives here rather than in <App/> because it is not a card yet --
  * nothing is committed to the URL until "Generate link" is pressed.
  */
-export default function CardCreator({ onRoleChange }) {
-  const [role, setRole] = useState(DEFAULT_ROLE)
+export default function CardCreator() {
+  const [delivery, setDelivery] = useState(DEFAULT_DELIVERY)
   const [questions, setQuestions] = useState(() => [createEmptyQuestion()])
   const [generatedUrl, setGeneratedUrl] = useState('')
   const [tooLong, setTooLong] = useState(false)
@@ -71,20 +71,13 @@ export default function CardCreator({ onRoleChange }) {
     reset()
   }
 
-  function handleRoleChange(nextRole) {
-    setRole(nextRole)
-    // Let <App/> repaint the accent immediately so the picker doubles as a preview.
-    onRoleChange?.(nextRole)
-    reset()
-  }
-
   function handleSubmit(event) {
     event.preventDefault()
     if (!canGenerate) return
 
     // Refuse a card whose *answered* form would not survive the return trip,
     // rather than letting the recipient hit the wall instead.
-    const card = { t: role, q: ready }
+    const card = { t: delivery, q: ready }
     if (projectedAnsweredLength(card) > URL_LENGTH_HARD_MAX) {
       setGeneratedUrl('')
       setTooLong(true)
@@ -111,33 +104,35 @@ export default function CardCreator({ onRoleChange }) {
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-6">
         <fieldset>
-          <legend className="eyebrow">Addressed to</legend>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            {ROLES.map((option) => (
+          <legend className="eyebrow">How it arrives</legend>
+          <p className="mt-1 text-xs text-muted-foreground">
+            What the recipient sees before the questions.
+          </p>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            {DELIVERIES.map((option) => (
               <label
                 key={option.id}
-                data-role={option.id}
                 className={`cursor-pointer rounded-button border px-3 py-2 transition-colors ${
-                  role === option.id
+                  delivery === option.id
                     ? 'border-primary bg-surface-2'
                     : 'border-border bg-bg-sunken hover:border-border-strong'
                 }`}
               >
                 <input
                   type="radio"
-                  name="role"
+                  name="delivery"
                   value={option.id}
-                  checked={role === option.id}
-                  onChange={() => handleRoleChange(option.id)}
+                  checked={delivery === option.id}
+                  onChange={() => {
+                    setDelivery(option.id)
+                    reset()
+                  }}
                   className="sr-only"
                 />
-                <span className="flex items-center gap-2">
-                  <span aria-hidden="true" className="size-2.5 shrink-0 rounded-chip bg-primary" />
-                  <span className="text-sm font-semibold text-foreground">{option.label}</span>
+                <span className="block text-sm font-semibold text-foreground">
+                  {option.label}
                 </span>
-                <span className="mt-0.5 block text-xs text-muted-foreground">
-                  {option.audience}
-                </span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">{option.hint}</span>
               </label>
             ))}
           </div>

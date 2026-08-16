@@ -10,18 +10,15 @@ const BUILD_VERSION = __APP_VERSION__
 /**
  * Page shell.
  *
- * `data-role` is the single place a card's `t` value touches presentation. It
- * selects a role accent that already exists in justasking.css, so a malicious
- * link can pick an accent but never supply one.
+ * The accent is the brand primary throughout; a card's `t` value now chooses a
+ * delivery style rather than a colour, and that selection happens further down
+ * in <Delivery/>.
  */
-export default function Layout({ role = 'marine', children }) {
+export default function Layout({ children }) {
   const { scheme, toggle } = useColorScheme()
 
   return (
-    <div
-      data-role={role}
-      className="ambient-bloom flex min-h-screen flex-col items-center px-4 py-8 sm:py-12"
-    >
+    <div className="ambient-bloom flex min-h-screen flex-col items-center px-4 py-8 sm:py-12">
       <div className="flex w-full max-w-xl flex-1 flex-col">
         <BrandHeader scheme={scheme} onToggleScheme={toggle} />
         <main className="flex flex-1 flex-col justify-center">{children}</main>

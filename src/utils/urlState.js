@@ -2,14 +2,14 @@ import LZString from 'lz-string'
 
 import {
   DEFAULT_KIND,
-  DEFAULT_ROLE,
+  DEFAULT_DELIVERY,
   KIND_IDS,
   MAX_OPTION_LENGTH,
   MAX_OPTIONS,
   MAX_PROMPT_LENGTH,
   MAX_QUESTIONS,
   MAX_TEXT_ANSWER_LENGTH,
-  ROLE_IDS,
+  DELIVERY_IDS,
 } from '../constants.js'
 
 /**
@@ -17,7 +17,7 @@ import {
  * two or three characters of URL after compression, and the whole point of the
  * app is that the card fits in a link somebody can paste into a text message.
  *
- *   t -> role accent id       (string)
+ *   t -> delivery style id    (string)
  *   q -> questions            (array, 1..MAX_QUESTIONS)
  *
  * and per question:
@@ -144,9 +144,11 @@ export function sanitizeState(raw) {
   // A card with nothing answerable in it is not a card.
   if (questions.length === 0) return null
 
-  const role = ROLE_IDS.includes(raw.t) ? raw.t : DEFAULT_ROLE
+  // An unrecognised style falls back rather than failing the card. Links minted
+  // when `t` carried a theme name, and later a role accent, land here.
+  const delivery = DELIVERY_IDS.includes(raw.t) ? raw.t : DEFAULT_DELIVERY
 
-  return { t: role, q: questions }
+  return { t: delivery, q: questions }
 }
 
 /** True once every question on the card carries an answer. */

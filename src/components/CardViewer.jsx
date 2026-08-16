@@ -3,14 +3,14 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { MAX_TEXT_ANSWER_LENGTH, kindOf } from '../constants'
 import { encodeState, isComplete } from '../utils/urlState'
 import { Card } from './Layout'
-import SealedDispatch from './SealedDispatch'
+import Delivery from './Delivery'
 import ShareLink from './ShareLink'
 
 /** Pause after a choice is tapped, so the selection is seen before it advances. */
 const ADVANCE_MS = 260
 
 /**
- * The recipient's view: break the seal, answer one question at a time, get a
+ * The recipient's view: open the delivery, answer one question at a time, get a
  * link back.
  *
  * Questions are presented singly rather than as a form. A card is a
@@ -45,7 +45,7 @@ export default function CardViewer({ card }) {
   }
 
   return (
-    <SealedDispatch>
+    <Delivery styleId={card.t}>
       {onReview ? (
         <Card className="ja-rise">
           <p className="eyebrow">{complete ? 'Ready to send' : 'Not finished'}</p>
@@ -103,7 +103,7 @@ export default function CardViewer({ card }) {
           onNext={() => setStep(step + 1)}
         />
       )}
-    </SealedDispatch>
+    </Delivery>
   )
 }
 

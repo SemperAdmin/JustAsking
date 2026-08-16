@@ -73,21 +73,54 @@ export function kindOf(id) {
 }
 
 /**
- * Role accents, from the Semper Admin style guide: four roles, four colours,
- * matched to the audience being addressed.
+ * Delivery styles.
  *
- * A card's `t` value is one of these ids. It selects a `data-role` attribute
- * that re-points `--color-primary` in justasking.css, so a card can pick an
- * accent from this list but can never supply styling of its own.
+ * How the card presents itself to the recipient before the questions appear.
+ * This replaced a role accent (marine / leader / commander / admin) that only
+ * ever changed a colour and was never shown to the person receiving the card --
+ * the meaning stayed in the sender's head. A delivery style changes something
+ * the recipient actually experiences.
+ *
+ * `ms` is how long that style's CSS sequence runs before the questions take
+ * over, and must stay in step with the animations in justasking.css.
  */
-export const ROLES = [
-  { id: 'marine', label: 'Marine', audience: 'Junior enlisted' },
-  { id: 'leader', label: 'Leader', audience: 'NCO and SNCO' },
-  { id: 'commander', label: 'Commander', audience: 'Officer' },
-  { id: 'admin', label: 'Admin', audience: 'S-1 and admin' },
+export const DELIVERIES = [
+  {
+    id: 'env',
+    label: 'Sealed dispatch',
+    hint: 'Wax seal, envelope, letter slides out',
+    action: 'Break the seal',
+    ms: 1180,
+  },
+  {
+    id: 'stamp',
+    label: 'Stamped orders',
+    hint: 'A stamp comes down hard on the page',
+    action: 'Open the orders',
+    ms: 940,
+  },
+  {
+    id: 'wire',
+    label: 'Field transmission',
+    hint: 'Arrives over the net, scanned in',
+    action: 'Receive traffic',
+    ms: 1020,
+  },
+  {
+    id: 'scroll',
+    label: 'Unrolled orders',
+    hint: 'A tied scroll unrolls',
+    action: 'Cut the cord',
+    ms: 1060,
+  },
 ]
 
-export const ROLE_IDS = ROLES.map((role) => role.id)
+export const DELIVERY_IDS = DELIVERIES.map((delivery) => delivery.id)
 
-/** Scarlet is the brand primary, so the Marine accent is the default. */
-export const DEFAULT_ROLE = ROLES[0].id
+/** The envelope is the original, and the one most people will expect. */
+export const DEFAULT_DELIVERY = 'env'
+
+/** Look up a delivery by its stored code. */
+export function deliveryOf(id) {
+  return DELIVERIES.find((delivery) => delivery.id === id) ?? DELIVERIES[0]
+}

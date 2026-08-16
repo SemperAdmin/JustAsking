@@ -4,7 +4,6 @@ import CardCreator from './components/CardCreator'
 import CardResult from './components/CardResult'
 import CardViewer from './components/CardViewer'
 import Layout from './components/Layout'
-import { DEFAULT_ROLE } from './constants'
 import { decodeState, isComplete } from './utils/urlState'
 
 /** True when there is a fragment worth trying to decode. */
@@ -29,9 +28,6 @@ export default function App() {
   const [card, setCard] = useState(() => decodeState(window.location.hash))
   const [linkWasBroken, setLinkWasBroken] = useState(() => hasHash() && !decodeState(window.location.hash))
 
-  // Accent shown while the creator is open, before any card exists.
-  const [draftRole, setDraftRole] = useState(DEFAULT_ROLE)
-
   // Keep the view in step with the address bar: the back button after a reset,
   // or someone pasting a different card into the same tab.
   useEffect(() => {
@@ -53,10 +49,8 @@ export default function App() {
     setLinkWasBroken(false)
   }, [])
 
-  const role = card?.t ?? draftRole
-
   return (
-    <Layout role={role}>
+    <Layout>
       {card === null ? (
         <>
           {linkWasBroken ? (
@@ -65,7 +59,7 @@ export default function App() {
               whoever sent it to paste the whole thing, or start your own card below.
             </div>
           ) : null}
-          <CardCreator onRoleChange={setDraftRole} />
+          <CardCreator />
         </>
       ) : isComplete(card) ? (
         <CardResult card={card} onReset={handleReset} />

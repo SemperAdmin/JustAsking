@@ -13,54 +13,12 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * Role accents.
- *
- * The style guide pairs each audience with a colour -- "four roles, four
- * colours, match the accent to the audience". A card carries the role it was
- * addressed to in its URL, and that role re-points the primary token. Every
- * component just reads `--color-primary`, so none of them know roles exist.
+ * The role accents that used to live here (marine / leader / commander /
+ * admin) are gone. They only ever re-pointed --color-primary, and the label
+ * was never shown to the recipient, so the meaning stayed in the sender's head.
+ * That slot in the creator now picks a delivery style instead, which changes
+ * something the reader can actually see. The accent is the brand primary.
  */
-[data-role='marine'] {
-  --color-primary: var(--color-usmc-scarlet);
-  --color-primary-foreground: #fffcf4;
-  --color-ring: var(--color-usmc-scarlet);
-}
-.dark [data-role='marine'] {
-  --color-primary: var(--color-usmc-scarlet-300);
-  --color-primary-foreground: var(--color-ink-900);
-}
-
-[data-role='leader'] {
-  --color-primary: var(--color-brass);
-  --color-primary-foreground: #1a1610;
-  --color-ring: var(--color-brass);
-}
-.dark [data-role='leader'] {
-  --color-primary: var(--color-brass-300);
-  --color-primary-foreground: var(--color-ink-900);
-}
-
-[data-role='commander'] {
-  --color-primary: var(--color-marine-blue);
-  --color-primary-foreground: var(--color-parchment);
-  --color-ring: var(--color-marine-blue);
-}
-.dark [data-role='commander'] {
-  --color-primary: var(--color-marine-blue-100);
-  --color-primary-foreground: var(--color-ink-900);
-}
-
-[data-role='admin'] {
-  --color-primary: var(--color-role-admin);
-  --color-primary-foreground: #fffcf4;
-  --color-ring: var(--color-role-admin);
-}
-.dark [data-role='admin'] {
-  /* The guide names no light variant for the admin green, so derive one from
-   * the token rather than introduce a sixth hex the style guide does not own. */
-  --color-primary: color-mix(in srgb, var(--color-role-admin) 74%, white);
-  --color-primary-foreground: var(--color-ink-900);
-}
 
 /* Tint the gradient accent with the active role instead of always running
  * scarlet-to-brass, so the hero keyword matches the card's audience. */
@@ -111,38 +69,53 @@
 }
 
 /* ------------------------------------------------------------------ *
- * Sealed dispatch
+ * Delivery styles
  *
- * The recipient's card arrives closed, under a wax seal, and opens on a
- * deliberate tap: the wax cracks, the flap swings back, and the letter slides
- * up out of the envelope before the questions take over.
+ * How a card presents itself before the questions appear. The sender picks one;
+ * `data-delivery` on the panel selects it. Four styles, four distinct motion
+ * signatures -- a hinge and slide, an impact, an electronic scan, an unroll --
+ * so they read as genuinely different arrivals rather than recolours.
  *
- * The envelope is built from four stacked pieces so the letter has somewhere to
- * come from. Front-to-back: seal, flap, front panel, letter, back panel. The
- * letter sits behind the front panel while closed, which is what makes it look
- * like it was inside rather than pasted on top.
+ * Each runs longer than the style guide's 240ms cap. That exception is argued
+ * in the README: it is the one beat the product exists for, and it runs only
+ * when the reader taps for it.
  *
- * The whole sequence runs about 1.2s, against the style guide's 240ms cap. That
- * exception is argued in the README; in short, this is the one beat the product
- * exists for, and it runs only when the reader asks for it.
- *
- * Every rule here is inert until `data-phase="opening"` is set, and the
- * reduced-motion block at the end removes the sequence entirely.
+ * Every animated element declares `--dur` alongside its animation. That is not
+ * decorative: the reduced-motion opt-in at the end of this file reads it back,
+ * which is what lets one rule re-enable every sequence instead of restating
+ * durations style by style.
  * ------------------------------------------------------------------ */
 
-.dispatch {
+.delivery {
   perspective: 1200px;
 }
 
-.dispatch__envelope {
+.delivery__stage {
   position: relative;
   aspect-ratio: 8 / 5;
   width: 100%;
 }
 
-/* Back panel: the full rectangle, visible through the opening once the flap
- * lifts. */
-.dispatch__back {
+/* Shared paper surface, used by the envelope, the orders and the scroll. */
+.paper-ruled::after {
+  content: '';
+  position: absolute;
+  inset: 18% 14% auto 14%;
+  height: 46%;
+  background: repeating-linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--color-neutral-300) 70%, transparent) 0 2px,
+    transparent 2px 13px
+  );
+}
+
+/* --- 1. Sealed dispatch -------------------------------------------- *
+ * Stacked back to front: back panel, letter, front panel, flap, seal. The
+ * letter sits behind the front panel while closed, which is what makes it look
+ * like it was inside rather than pasted on top.
+ * ------------------------------------------------------------------- */
+
+.env__back {
   position: absolute;
   inset: 0;
   border-radius: var(--radius-md);
@@ -156,11 +129,11 @@
   box-shadow: var(--shadow-md);
 }
 
-/* The letter itself. It must sit entirely inside the envelope while closed:
- * its top edge below the front panel's, and its bottom above the envelope's,
- * or it shows through the corners the flap's triangle does not cover and hangs
- * out of the bottom. It only escapes those bounds once it slides. */
-.dispatch__letter {
+/* The letter must sit entirely inside the envelope while closed: its top edge
+ * below the front panel's, its bottom above the envelope's. Otherwise it shows
+ * through the two corners the flap's triangle does not cover, and hangs out of
+ * the bottom. */
+.env__letter {
   position: absolute;
   left: 6%;
   right: 6%;
@@ -171,21 +144,7 @@
   box-shadow: 0 -2px 6px color-mix(in srgb, black 22%, transparent);
 }
 
-/* Ruled lines, so the letter reads as a letter and not a blank card. */
-.dispatch__letter::after {
-  content: '';
-  position: absolute;
-  inset: 16% 12% auto 12%;
-  height: 46%;
-  background: repeating-linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--color-neutral-300) 70%, transparent) 0 2px,
-    transparent 2px 13px
-  );
-}
-
-/* Front panel: the lower face of the envelope, in front of the letter. */
-.dispatch__front {
+.env__front {
   position: absolute;
   inset: 44% 0 0 0;
   border-radius: 0 0 var(--radius-md) var(--radius-md);
@@ -194,7 +153,7 @@
   border-top-color: color-mix(in srgb, var(--color-parchment-700) 80%, black);
 }
 
-.dispatch__flap {
+.env__flap {
   position: absolute;
   inset: 0 0 auto 0;
   height: 62%;
@@ -207,12 +166,11 @@
    * 90deg it projected back *upward*, escaping the card and crossing the
    * heading, and -- because a clip-path defeats backface-visibility in
    * Chromium's 3D compositor -- its reverse also intersected the panels behind
-   * it. Stopping edge-on, with opacity carrying the last of it, reads the same
-   * and avoids both. */
+   * it. Stopping edge-on reads the same and avoids both. */
   backface-visibility: hidden;
 }
 
-.dispatch__seal {
+.env__seal {
   position: absolute;
   left: 50%;
   top: 62%;
@@ -221,9 +179,7 @@
   margin: -2.125rem 0 0 -2.125rem;
 }
 
-/* Two full discs, each clipped to one side of an irregular break, so the wax
- * cracks along a line that does not look machined. */
-.dispatch__wax {
+.env__wax {
   position: absolute;
   inset: 0;
   display: grid;
@@ -243,17 +199,16 @@
 
 /* The left half overlaps the break by ~1% so antialiasing along the shared edge
  * does not show a hairline through the intact seal. */
-.dispatch__wax--l {
+.env__wax--l {
   clip-path: polygon(0 0, 53% 0, 47% 25%, 56% 50%, 46% 76%, 52% 100%, 0 100%);
 }
-.dispatch__wax--r {
+.env__wax--r {
   clip-path: polygon(52% 0, 100% 0, 100% 100%, 51% 100%, 45% 76%, 55% 50%, 46% 25%);
 }
 
 /* Struck monogram. The full emblem turns to mush at this size, so the wax
- * carries the display face instead -- legible at any scale, and still the
- * brand's own voice. */
-.dispatch__sigil {
+ * carries the display face instead. */
+.env__sigil {
   font-family: var(--font-display);
   font-size: 1.75rem;
   letter-spacing: 0.06em;
@@ -264,29 +219,32 @@
     0 -1px 0 color-mix(in srgb, white 22%, transparent);
 }
 
-/* --- the sequence -------------------------------------------------- *
- * 0ms     the envelope tenses
- * 110ms   the wax cracks and the halves drop away
- * 330ms   the flap swings back
- * 640ms   the letter slides up and out
- * 980ms   envelope and letter fade as the questions take over
- * ------------------------------------------------------------------- */
-
-[data-phase='opening'] .dispatch__envelope {
+[data-phase='opening'] .delivery__stage {
+  --dur: 200ms, 260ms;
   animation:
     ja-tense 200ms ease-out both,
-    ja-dispatch-out 260ms 980ms ease-in forwards;
+    ja-fade-out 260ms 780ms ease-in forwards;
 }
-[data-phase='opening'] .dispatch__wax--l {
+[data-delivery='env'][data-phase='opening'] .delivery__stage {
+  --dur: 200ms, 260ms;
+  animation:
+    ja-tense 200ms ease-out both,
+    ja-fade-out 260ms 980ms ease-in forwards;
+}
+[data-phase='opening'] .env__wax--l {
+  --dur: 300ms;
   animation: ja-wax-left 300ms 110ms cubic-bezier(0.3, 0.9, 0.4, 1) forwards;
 }
-[data-phase='opening'] .dispatch__wax--r {
+[data-phase='opening'] .env__wax--r {
+  --dur: 300ms;
   animation: ja-wax-right 300ms 110ms cubic-bezier(0.3, 0.9, 0.4, 1) forwards;
 }
-[data-phase='opening'] .dispatch__flap {
+[data-phase='opening'] .env__flap {
+  --dur: 380ms;
   animation: ja-flap-open 380ms 330ms cubic-bezier(0.3, 0.7, 0.2, 1) forwards;
 }
-[data-phase='opening'] .dispatch__letter {
+[data-phase='opening'] .env__letter {
+  --dur: 420ms;
   animation: ja-letter-out 420ms 640ms cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
 }
 
@@ -318,19 +276,275 @@
 }
 @keyframes ja-letter-out {
   to {
-    /* Far enough that the letter clears the front panel and reads as having
-     * come out, rather than merely shifted. */
     transform: translateY(-82%) scale(1.04);
   }
 }
-@keyframes ja-dispatch-out {
+@keyframes ja-fade-out {
   to {
     transform: translateY(-10px) scale(0.98);
     opacity: 0;
   }
 }
 
-/* What comes out of the envelope. */
+/* --- 2. Stamped orders --------------------------------------------- *
+ * A page, and a stamp that comes down hard on it. The signature here is
+ * impact: fast descent, overshoot, and a jolt through the paper.
+ * ------------------------------------------------------------------- */
+
+.stamp__page {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-md);
+  background: linear-gradient(165deg, #fffdf6, var(--color-parchment-300));
+  border: 1px solid var(--color-parchment-700);
+  box-shadow: var(--shadow-md);
+}
+
+.stamp__mark {
+  position: absolute;
+  left: 50%;
+  top: 55%;
+  translate: -50% -50%;
+  rotate: -13deg;
+  padding: 0.4rem 0.9rem;
+  border: 3px solid var(--color-usmc-scarlet);
+  border-radius: var(--radius-xs);
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  letter-spacing: 0.08em;
+  line-height: 1.1;
+  color: var(--color-usmc-scarlet);
+  opacity: 0;
+  /* Slight bleed, the way real ink sits unevenly on paper. */
+  box-shadow: inset 0 0 6px color-mix(in srgb, var(--color-usmc-scarlet) 22%, transparent);
+}
+
+[data-phase='opening'] .stamp__mark {
+  --dur: 360ms;
+  animation: ja-stamp-hit 360ms 120ms cubic-bezier(0.55, 0, 0.35, 1.4) forwards;
+}
+[data-phase='opening'] .stamp__page {
+  --dur: 220ms;
+  animation: ja-stamp-jolt 220ms 430ms ease-out both;
+}
+
+@keyframes ja-stamp-hit {
+  0% {
+    scale: 2.7;
+    opacity: 0;
+  }
+  55% {
+    opacity: 1;
+  }
+  78% {
+    scale: 0.93;
+    opacity: 1;
+  }
+  100% {
+    scale: 1;
+    opacity: 1;
+  }
+}
+@keyframes ja-stamp-jolt {
+  30% {
+    transform: translateY(3px) scale(0.995);
+  }
+}
+
+/* --- 3. Field transmission ----------------------------------------- *
+ * Arrives over the net. The signature is electronic: a scan line crossing a
+ * dark panel, mono type, and signal bars finding strength.
+ * ------------------------------------------------------------------- */
+
+.wire__panel {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  gap: 0.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 55%, transparent);
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--color-primary) 5%, transparent) 0 1px,
+      transparent 1px 4px
+    ),
+    var(--color-ink-900);
+}
+
+.wire__label {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.18em;
+  color: var(--color-primary);
+}
+
+.wire__bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 1.5rem;
+}
+.wire__bars span {
+  width: 6px;
+  height: 25%;
+  border-radius: 1px;
+  background: var(--color-primary);
+  opacity: 0.35;
+}
+
+.wire__scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: var(--color-primary);
+  box-shadow: 0 0 12px 2px color-mix(in srgb, var(--color-primary) 65%, transparent);
+  opacity: 0;
+}
+
+[data-phase='opening'] .wire__scan {
+  --dur: 760ms;
+  animation: ja-scan 760ms 60ms cubic-bezier(0.4, 0, 0.6, 1) forwards;
+}
+[data-phase='opening'] .wire__label {
+  --dur: 300ms;
+  animation: ja-blink 300ms steps(2, jump-none) 3;
+}
+[data-phase='opening'] .wire__bars span {
+  --dur: 260ms;
+  animation: ja-signal 260ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+[data-phase='opening'] .wire__bars span:nth-child(1) {
+  animation-delay: 200ms;
+}
+[data-phase='opening'] .wire__bars span:nth-child(2) {
+  animation-delay: 340ms;
+}
+[data-phase='opening'] .wire__bars span:nth-child(3) {
+  animation-delay: 480ms;
+}
+
+@keyframes ja-scan {
+  0% {
+    top: 0;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+@keyframes ja-blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+@keyframes ja-signal {
+  to {
+    height: 100%;
+    opacity: 1;
+  }
+}
+
+/* --- 4. Unrolled orders -------------------------------------------- *
+ * A tied scroll that unrolls. The signature is the unroll: the body grows from
+ * a closed tube while the rods travel apart. `top` is animated rather than
+ * transformed because the rods must track the growing edge, which a transform
+ * on a percentage-sized box does not do cleanly.
+ * ------------------------------------------------------------------- */
+
+.scroll__body {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 8%;
+  bottom: 8%;
+  border-radius: var(--radius-xs);
+  background: linear-gradient(170deg, #fffdf6, var(--color-parchment-300));
+  box-shadow: var(--shadow-md);
+  transform: scaleY(0.06);
+  transform-origin: 50% 50%;
+}
+
+.scroll__rod {
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  height: 11%;
+  top: 44.5%;
+  border-radius: var(--radius-chip);
+  background: linear-gradient(
+    to bottom,
+    var(--color-brass-300),
+    var(--color-brass) 55%,
+    var(--color-brass-700)
+  );
+  box-shadow: 0 1px 3px color-mix(in srgb, black 40%, transparent);
+}
+
+/* The cord, gone once the scroll is cut open. */
+.scroll__cord {
+  position: absolute;
+  left: 46%;
+  right: 46%;
+  top: 38%;
+  bottom: 38%;
+  border-radius: var(--radius-chip);
+  background: var(--color-usmc-scarlet);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-usmc-scarlet-700) 60%, transparent);
+}
+
+[data-phase='opening'] .scroll__cord {
+  --dur: 240ms;
+  animation: ja-cord-cut 240ms ease-in forwards;
+}
+[data-phase='opening'] .scroll__body {
+  --dur: 520ms;
+  animation: ja-unroll 520ms 240ms cubic-bezier(0.2, 0.75, 0.3, 1) forwards;
+}
+[data-phase='opening'] .scroll__rod--top {
+  --dur: 520ms;
+  animation: ja-rod-up 520ms 240ms cubic-bezier(0.2, 0.75, 0.3, 1) forwards;
+}
+[data-phase='opening'] .scroll__rod--bottom {
+  --dur: 520ms;
+  animation: ja-rod-down 520ms 240ms cubic-bezier(0.2, 0.75, 0.3, 1) forwards;
+}
+
+@keyframes ja-cord-cut {
+  to {
+    transform: scaleX(2.4);
+    opacity: 0;
+  }
+}
+@keyframes ja-unroll {
+  to {
+    transform: scaleY(1);
+  }
+}
+@keyframes ja-rod-up {
+  to {
+    top: 2%;
+  }
+}
+@keyframes ja-rod-down {
+  to {
+    top: 87%;
+  }
+}
+
+/* --- what comes out ------------------------------------------------ */
+
 .ja-rise {
   animation: ja-rise 340ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
 }
@@ -351,12 +565,10 @@
   }
 }
 
-/* The guide gates every transition behind this, and a 1.2s reveal is exactly
- * what it exists to suppress.
- *
- * The envelope sequence is not listed here: under Reduce Motion the component
- * never enters the `opening` phase at all, so there is nothing to switch off.
- * Leaving it out is what makes the opt-in below possible. */
+/* The guide gates every transition behind this. The delivery sequences are not
+ * listed: a reader who has turned the animation off never reaches the `opening`
+ * phase, so there is nothing to switch off, and leaving them out is what makes
+ * the opt-in below reachable. */
 @media (prefers-reduced-motion: reduce) {
   .ja-rise,
   .ja-stagger {
@@ -364,31 +576,22 @@
   }
 }
 
-/* Playing the sequence on a device that asked for reduced motion.
+/* Playing a delivery on a device that asked for reduced motion.
  *
- * The seal animates by default for everyone -- the product owner's call,
- * argued in the README -- with a one-tap Skip offered to readers whose device
- * asked for less motion. This block is what lets the sequence through on those
- * devices.
+ * The seal animates by default for everyone -- the product owner's call, argued
+ * in the README -- with a one-tap Skip offered to readers whose device asked for
+ * less motion. This is what lets the sequence through on those devices.
  *
  * It has to out-shout the universal
  * `*, *::before, *::after { animation-duration: 0.01ms !important }` that ships
  * in the brand token mirror. That rule is correct and the mirror is read-only,
  * so it is beaten the only way an !important on a universal selector can be:
- * !important on a more specific one. The durations are restated rather than
- * inherited, which means they have to stay in step with the sequence above. */
+ * !important on a more specific one. Reading `--dur` back from each element
+ * keeps this to a single rule no matter how many delivery styles exist -- the
+ * alternative was restating every duration here, which would silently rot the
+ * moment a sequence was retimed. Elements with no `--dur` stay suppressed. */
 @media (prefers-reduced-motion: reduce) {
-  [data-motion='play'] .dispatch__envelope {
-    animation-duration: 200ms, 260ms !important;
-  }
-  [data-motion='play'] .dispatch__wax--l,
-  [data-motion='play'] .dispatch__wax--r {
-    animation-duration: 300ms !important;
-  }
-  [data-motion='play'] .dispatch__flap {
-    animation-duration: 380ms !important;
-  }
-  [data-motion='play'] .dispatch__letter {
-    animation-duration: 420ms !important;
+  [data-motion='play'] * {
+    animation-duration: var(--dur, 0.01ms) !important;
   }
 }
