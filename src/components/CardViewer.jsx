@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { encodeState } from '../utils/urlState'
 import { Card } from './Layout'
+import SealedDispatch from './SealedDispatch'
 import ShareLink from './ShareLink'
 
 /**
- * The recipient's view: read the question, pick an answer, get a link back.
+ * The recipient's view: break the seal, read the question, pick an answer, get
+ * a link back.
  *
  * The choice is kept local instead of being pushed into <App/>'s state. Writing
  * it upward would flip the app straight to <CardResult/>, and the recipient
@@ -54,19 +56,49 @@ export default function CardViewer({ card }) {
   }
 
   return (
-    <Card>
+    <SealedDispatch>
+      <Question card={card} onAnswer={handleAnswer} />
+    </SealedDispatch>
+  )
+}
+
+/**
+ * The question itself, rendered once the seal is broken.
+ *
+ * Focus moves to the heading on mount so that breaking the seal actually
+ * announces the question to a screen reader, rather than silently swapping the
+ * contents of the page underneath someone.
+ */
+function Question({ card, onAnswer }) {
+  const headingRef = useRef(null)
+
+  useEffect(() => {
+    headingRef.current?.focus()
+  }, [])
+
+  return (
+    <Card className="ja-rise">
       <p className="eyebrow">Someone is asking</p>
 
       {/* Rendered as a text child, never as HTML. */}
-      <h1 className="mt-2 text-3xl font-bold text-balance break-words text-foreground">{card.q}</h1>
+      <h1
+        ref={headingRef}
+        tabIndex={-1}
+        className="mt-2 text-3xl font-bold text-balance break-words text-foreground outline-none"
+      >
+        {card.q}
+      </h1>
 
       <div className="mt-6 grid gap-2.5">
         {card.o.map((option, index) => (
           <button
             key={`${index}-${option}`}
             type="button"
-            onClick={() => handleAnswer(option)}
-            className="rounded-button border border-border bg-bg-sunken px-4 py-3 text-lg font-semibold break-words text-foreground transition-colors hover:border-primary hover:bg-surface-2"
+            onClick={() => onAnswer(option)}
+            // Stagger only the entrance; the delay is presentational and the
+            // button is clickable from the first frame regardless.
+            style={{ animationDelay: `${120 + index * 60}ms` }}
+            className="ja-stagger rounded-button border border-border bg-bg-sunken px-4 py-3 text-lg font-semibold break-words text-foreground transition-colors hover:border-primary hover:bg-surface-2"
           >
             {option}
           </button>

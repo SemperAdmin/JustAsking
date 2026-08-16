@@ -109,3 +109,206 @@
   width: 5rem;
   background: var(--color-usmc-scarlet);
 }
+
+/* ------------------------------------------------------------------ *
+ * Sealed dispatch
+ *
+ * The recipient's card arrives closed, under a wax seal, and opens on a
+ * deliberate tap. This is the one place the app spends longer than the style
+ * guide's 240ms motion budget: the whole sequence runs about 800ms.
+ *
+ * The exception is argued in the README. In short: the guide's cap is aimed at
+ * route transitions and incidental chrome, and this is neither -- it is the
+ * single beat the product exists for, and it is user-initiated rather than
+ * imposed on someone who only wanted to get somewhere else.
+ *
+ * Every rule below is inert unless a `data-phase` is set, and the reduced-motion
+ * block at the end removes the sequence entirely.
+ * ------------------------------------------------------------------ */
+
+.dispatch {
+  perspective: 1200px;
+}
+
+.dispatch__envelope {
+  position: relative;
+  aspect-ratio: 8 / 5;
+  width: 100%;
+}
+
+/* Body of the envelope. Parchment reads as a physical object, so it stays the
+ * same in both themes rather than following the surface tokens. */
+.dispatch__pocket {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-md);
+  background: linear-gradient(160deg, var(--color-parchment-300), var(--color-parchment));
+  border: 1px solid var(--color-parchment-700);
+  box-shadow: var(--shadow-md);
+}
+
+/* The lining: the shadowed inside of the envelope, cut to exactly the flap's
+ * footprint and sitting underneath it. While closed it reads as the seam where
+ * the flap rests; once the flap lifts it is what makes the envelope read as
+ * open rather than as a blank slab. */
+.dispatch__pocket::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 62%;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--color-parchment-700) 92%, black) 0%,
+    color-mix(in srgb, var(--color-parchment-700) 70%, black) 55%,
+    var(--color-parchment-700) 100%
+  );
+}
+
+.dispatch__flap {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 62%;
+  transform-origin: 50% 0;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  background: linear-gradient(to bottom, var(--color-parchment), var(--color-parchment-700));
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+
+  /* The flap stops edge-on at 90deg rather than continuing over the back.
+   * Past 90deg it projected back *upward*, outside the card and across the
+   * heading, and -- because a clip-path defeats backface-visibility in
+   * Chromium's 3D compositor -- its reverse also intersected the pocket plane
+   * and washed the parchment flat. Stopping at edge-on, with opacity carrying
+   * the last of it, reads the same and avoids both. */
+  backface-visibility: hidden;
+}
+
+.dispatch__seal {
+  position: absolute;
+  left: 50%;
+  top: 62%;
+  width: 4.25rem;
+  height: 4.25rem;
+  margin: -2.125rem 0 0 -2.125rem;
+}
+
+/* Two full discs, each clipped to one side of an irregular break, so the wax
+ * cracks along a line that does not look machined. */
+.dispatch__wax {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-chip);
+  background: radial-gradient(
+    circle at 38% 32%,
+    var(--color-usmc-scarlet-300) 0%,
+    var(--color-usmc-scarlet) 45%,
+    var(--color-usmc-scarlet-700) 100%
+  );
+  box-shadow:
+    inset 0 2px 3px color-mix(in srgb, white 28%, transparent),
+    inset 0 -3px 5px color-mix(in srgb, black 34%, transparent),
+    0 2px 4px color-mix(in srgb, black 35%, transparent);
+}
+
+/* The left half overlaps the break by ~1% so antialiasing along the shared edge
+ * does not show a hairline through the intact seal. */
+.dispatch__wax--l {
+  clip-path: polygon(0 0, 53% 0, 47% 25%, 56% 50%, 46% 76%, 52% 100%, 0 100%);
+}
+.dispatch__wax--r {
+  clip-path: polygon(52% 0, 100% 0, 100% 100%, 51% 100%, 45% 76%, 55% 50%, 46% 25%);
+}
+
+/* Struck monogram. The full emblem turns to mush at this size, so the wax
+ * carries the display face instead -- legible at any scale, and still the
+ * brand's own voice. */
+.dispatch__sigil {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  color: color-mix(in srgb, var(--color-parchment) 88%, transparent);
+  text-shadow:
+    0 1px 0 color-mix(in srgb, black 45%, transparent),
+    0 -1px 0 color-mix(in srgb, white 22%, transparent);
+}
+
+/* --- the sequence -------------------------------------------------- */
+
+[data-phase='opening'] .dispatch__wax--l {
+  animation: ja-wax-left 240ms ease-in forwards;
+}
+[data-phase='opening'] .dispatch__wax--r {
+  animation: ja-wax-right 240ms ease-in forwards;
+}
+[data-phase='opening'] .dispatch__flap {
+  animation: ja-flap-open 420ms 180ms cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+[data-phase='opening'] .dispatch__envelope {
+  animation: ja-envelope-sink 340ms 400ms ease-in forwards;
+}
+
+@keyframes ja-wax-left {
+  to {
+    transform: translate(-15px, 26px) rotate(-26deg);
+    opacity: 0;
+  }
+}
+@keyframes ja-wax-right {
+  to {
+    transform: translate(15px, 30px) rotate(29deg);
+    opacity: 0;
+  }
+}
+@keyframes ja-flap-open {
+  70% {
+    opacity: 1;
+  }
+  to {
+    transform: rotateX(-92deg);
+    opacity: 0;
+  }
+}
+@keyframes ja-envelope-sink {
+  to {
+    transform: translateY(18px) scale(0.97);
+    opacity: 0;
+  }
+}
+
+/* What comes out of the envelope. */
+.ja-rise {
+  animation: ja-rise 340ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+.ja-stagger {
+  animation: ja-stagger 260ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+@keyframes ja-rise {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+@keyframes ja-stagger {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+}
+
+/* The guide gates every transition behind this, and a 800ms reveal is exactly
+ * what it exists to suppress. The seal itself stays -- it is content and an
+ * interaction, not decoration -- it simply opens at once. */
+@media (prefers-reduced-motion: reduce) {
+  .dispatch__wax,
+  .dispatch__flap,
+  .dispatch__envelope,
+  .ja-rise,
+  .ja-stagger {
+    animation: none !important;
+  }
+}

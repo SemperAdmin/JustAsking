@@ -32,10 +32,11 @@ export default function Layout({ role = 'marine', children }) {
 }
 
 /** The panel every view sits inside. 24px padding per the spacing scale. */
-export function Card({ children, className = '' }) {
+export function Card({ children, className = '', ...rest }) {
   return (
     <div
       className={`rounded-card border border-border bg-card p-5 shadow-card sm:p-6 ${className}`}
+      {...rest}
     >
       {children}
     </div>

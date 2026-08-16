@@ -136,6 +136,28 @@ does not name. It is produced with `color-mix()` from `--color-role-admin`
 rather than hardcoded, so it tracks the token instead of becoming a sixth hex
 the style guide does not own.
 
+### The one motion exception
+
+The recipient's card arrives sealed. Breaking the wax cracks the seal, opens the
+flap, and the question rises out of the envelope — about **800ms**, against the
+guide's §8 cap of 240ms and its "no page-transition theater" principle.
+
+This is a deliberate exception, recorded here rather than quietly taken. The
+argument for it:
+
+- The cap exists for **incidental** motion — route changes and chrome, things
+  standing between a reader and what they came for. This is not incidental. It
+  is the single beat the product exists for: someone was asked something.
+- It is **user-initiated**. Nothing animates on arrival; the sequence runs only
+  when the recipient taps "Break the seal", so the wait is chosen rather than
+  imposed.
+- It happens **once**, on one view, and never on the sender's side.
+
+Everything else in the app stays inside the budget. And the exception is not
+taken at anyone's expense: under `prefers-reduced-motion: reduce` the whole
+sequence is removed and the card opens instantly. The seal itself remains, since
+it is content and an interaction rather than decoration.
+
 ## Handling untrusted links
 
 Everything in the hash is attacker-controlled — anyone can hand-craft a link —
