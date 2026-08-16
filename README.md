@@ -205,6 +205,20 @@ taken at anyone's expense: under `prefers-reduced-motion: reduce` the whole
 sequence is removed and the card opens instantly. The seal itself remains, since
 it is content and an interaction rather than decoration.
 
+The seal also *says* so, and offers to play it anyway. Two reasons. An animation
+that silently does not happen is indistinguishable from one that is broken —
+which is exactly how this was first reported. And Reduce Motion is the right
+default for motion nobody asked for, not a veto over motion a reader has just
+asked for by name.
+
+Letting that request through takes some force: the brand token mirror ships a
+universal `*, *::before, *::after { animation-duration: 0.01ms !important }`.
+That rule is correct and the mirror is read-only, so the opt-in beats it the
+only way an `!important` on a universal selector can be beaten — an `!important`
+on a more specific one, in the `[data-motion='forced']` block at the end of
+`justasking.css`. Its durations are restated there and have to stay in step with
+the sequence.
+
 ## Handling untrusted links
 
 Everything in the hash is attacker-controlled — anyone can hand-craft a link —

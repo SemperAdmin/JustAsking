@@ -5,9 +5,7 @@ import { Card } from './Layout'
 /** How long the CSS sequence in justasking.css runs before the letter is out. */
 const SEQUENCE_MS = 1180
 
-function prefersReducedMotion() {
-  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
-}
+const REDUCED_QUERY = '(prefers-reduced-motion: reduce)'
 
 /**
  * Gates the recipient's questions behind a sealed envelope.
@@ -16,29 +14,52 @@ function prefersReducedMotion() {
  * run past the style guide's motion budget: nobody has motion imposed on them
  * on the way to somewhere else, and the wait is something the recipient chose.
  *
- * Reduced-motion readers still get the seal and still break it -- that beat is
- * content, not decoration. It just opens instantly.
+ * A reader with Reduce Motion enabled gets the seal opened instantly, and is
+ * told why -- an animation that silently does not happen is indistinguishable
+ * from one that is broken. They can still ask for it explicitly: the OS setting
+ * is a default for motion nobody asked for, not a veto over motion someone just
+ * requested by name.
  */
 export default function SealedDispatch({ children }) {
   const [phase, setPhase] = useState('sealed')
+  const [forced, setForced] = useState(false)
+  const [reduced, setReduced] = useState(
+    () => window.matchMedia?.(REDUCED_QUERY).matches ?? false,
+  )
   const timerRef = useRef(null)
 
   useEffect(() => () => clearTimeout(timerRef.current), [])
 
-  const open = useCallback(() => {
-    if (phase !== 'sealed') return
-    if (prefersReducedMotion()) {
-      setPhase('open')
-      return
-    }
-    setPhase('opening')
-    timerRef.current = setTimeout(() => setPhase('open'), SEQUENCE_MS)
-  }, [phase])
+  // The setting can be toggled while the page is open, so track it rather than
+  // sampling once.
+  useEffect(() => {
+    const query = window.matchMedia?.(REDUCED_QUERY)
+    if (!query) return
+    const onChange = (event) => setReduced(event.matches)
+    query.addEventListener('change', onChange)
+    return () => query.removeEventListener('change', onChange)
+  }, [])
+
+  const open = useCallback(
+    (force = false) => {
+      if (phase !== 'sealed') return
+      if (reduced && !force) {
+        setPhase('open')
+        return
+      }
+      // Marks the subtree so the forced-play block in justasking.css can
+      // override the token mirror's blanket animation suppression.
+      if (force) setForced(true)
+      setPhase('opening')
+      timerRef.current = setTimeout(() => setPhase('open'), SEQUENCE_MS)
+    },
+    [phase, reduced],
+  )
 
   if (phase === 'open') return children
 
   return (
-    <Card className="text-center" data-phase={phase}>
+    <Card className="text-center" data-phase={phase} data-motion={forced ? 'forced' : undefined}>
       <p className="eyebrow">Sealed dispatch</p>
       <p className="mt-2 text-sm text-muted-foreground">
         Someone has addressed a question to you.
@@ -66,12 +87,25 @@ export default function SealedDispatch({ children }) {
 
       <button
         type="button"
-        onClick={open}
+        onClick={() => open()}
         disabled={phase === 'opening'}
         className="mt-6 w-full rounded-button bg-primary px-4 py-3 font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-70"
       >
         {phase === 'opening' ? 'Opening…' : 'Break the seal'}
       </button>
+
+      {reduced && phase === 'sealed' ? (
+        <p className="mt-3 text-xs text-muted-foreground">
+          Reduce Motion is on for this device, so this opens instantly.{' '}
+          <button
+            type="button"
+            onClick={() => open(true)}
+            className="font-medium text-foreground underline underline-offset-4"
+          >
+            Play the animation anyway
+          </button>
+        </p>
+      ) : null}
     </Card>
   )
 }
