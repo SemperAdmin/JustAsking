@@ -114,16 +114,20 @@
  * Sealed dispatch
  *
  * The recipient's card arrives closed, under a wax seal, and opens on a
- * deliberate tap. This is the one place the app spends longer than the style
- * guide's 240ms motion budget: the whole sequence runs about 800ms.
+ * deliberate tap: the wax cracks, the flap swings back, and the letter slides
+ * up out of the envelope before the questions take over.
  *
- * The exception is argued in the README. In short: the guide's cap is aimed at
- * route transitions and incidental chrome, and this is neither -- it is the
- * single beat the product exists for, and it is user-initiated rather than
- * imposed on someone who only wanted to get somewhere else.
+ * The envelope is built from four stacked pieces so the letter has somewhere to
+ * come from. Front-to-back: seal, flap, front panel, letter, back panel. The
+ * letter sits behind the front panel while closed, which is what makes it look
+ * like it was inside rather than pasted on top.
  *
- * Every rule below is inert unless a `data-phase` is set, and the reduced-motion
- * block at the end removes the sequence entirely.
+ * The whole sequence runs about 1.2s, against the style guide's 240ms cap. That
+ * exception is argued in the README; in short, this is the one beat the product
+ * exists for, and it runs only when the reader asks for it.
+ *
+ * Every rule here is inert until `data-phase="opening"` is set, and the
+ * reduced-motion block at the end removes the sequence entirely.
  * ------------------------------------------------------------------ */
 
 .dispatch {
@@ -136,34 +140,58 @@
   width: 100%;
 }
 
-/* Body of the envelope. Parchment reads as a physical object, so it stays the
- * same in both themes rather than following the surface tokens. */
-.dispatch__pocket {
+/* Back panel: the full rectangle, visible through the opening once the flap
+ * lifts. */
+.dispatch__back {
   position: absolute;
   inset: 0;
   border-radius: var(--radius-md);
-  background: linear-gradient(160deg, var(--color-parchment-300), var(--color-parchment));
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--color-parchment-700) 88%, black) 0%,
+    color-mix(in srgb, var(--color-parchment-700) 72%, black) 60%,
+    var(--color-parchment-700) 100%
+  );
   border: 1px solid var(--color-parchment-700);
   box-shadow: var(--shadow-md);
 }
 
-/* The lining: the shadowed inside of the envelope, cut to exactly the flap's
- * footprint and sitting underneath it. While closed it reads as the seam where
- * the flap rests; once the flap lifts it is what makes the envelope read as
- * open rather than as a blank slab. */
-.dispatch__pocket::after {
+/* The letter itself. It must sit entirely inside the envelope while closed:
+ * its top edge below the front panel's, and its bottom above the envelope's,
+ * or it shows through the corners the flap's triangle does not cover and hangs
+ * out of the bottom. It only escapes those bounds once it slides. */
+.dispatch__letter {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  top: 46%;
+  height: 50%;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: linear-gradient(170deg, #fffdf6, var(--color-parchment-300));
+  box-shadow: 0 -2px 6px color-mix(in srgb, black 22%, transparent);
+}
+
+/* Ruled lines, so the letter reads as a letter and not a blank card. */
+.dispatch__letter::after {
   content: '';
   position: absolute;
-  inset: 0 0 auto 0;
-  height: 62%;
-  clip-path: polygon(0 0, 100% 0, 50% 100%);
-  border-radius: var(--radius-md) var(--radius-md) 0 0;
-  background: linear-gradient(
+  inset: 16% 12% auto 12%;
+  height: 46%;
+  background: repeating-linear-gradient(
     to bottom,
-    color-mix(in srgb, var(--color-parchment-700) 92%, black) 0%,
-    color-mix(in srgb, var(--color-parchment-700) 70%, black) 55%,
-    var(--color-parchment-700) 100%
+    color-mix(in srgb, var(--color-neutral-300) 70%, transparent) 0 2px,
+    transparent 2px 13px
   );
+}
+
+/* Front panel: the lower face of the envelope, in front of the letter. */
+.dispatch__front {
+  position: absolute;
+  inset: 44% 0 0 0;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  background: linear-gradient(160deg, var(--color-parchment-300), var(--color-parchment));
+  border: 1px solid var(--color-parchment-700);
+  border-top-color: color-mix(in srgb, var(--color-parchment-700) 80%, black);
 }
 
 .dispatch__flap {
@@ -175,12 +203,12 @@
   background: linear-gradient(to bottom, var(--color-parchment), var(--color-parchment-700));
   border-radius: var(--radius-md) var(--radius-md) 0 0;
 
-  /* The flap stops edge-on at 90deg rather than continuing over the back.
-   * Past 90deg it projected back *upward*, outside the card and across the
+  /* The flap stops edge-on at 90deg rather than continuing over the back. Past
+   * 90deg it projected back *upward*, escaping the card and crossing the
    * heading, and -- because a clip-path defeats backface-visibility in
-   * Chromium's 3D compositor -- its reverse also intersected the pocket plane
-   * and washed the parchment flat. Stopping at edge-on, with opacity carrying
-   * the last of it, reads the same and avoids both. */
+   * Chromium's 3D compositor -- its reverse also intersected the panels behind
+   * it. Stopping edge-on, with opacity carrying the last of it, reads the same
+   * and avoids both. */
   backface-visibility: hidden;
 }
 
@@ -236,30 +264,46 @@
     0 -1px 0 color-mix(in srgb, white 22%, transparent);
 }
 
-/* --- the sequence -------------------------------------------------- */
+/* --- the sequence -------------------------------------------------- *
+ * 0ms     the envelope tenses
+ * 110ms   the wax cracks and the halves drop away
+ * 330ms   the flap swings back
+ * 640ms   the letter slides up and out
+ * 980ms   envelope and letter fade as the questions take over
+ * ------------------------------------------------------------------- */
 
+[data-phase='opening'] .dispatch__envelope {
+  animation:
+    ja-tense 200ms ease-out both,
+    ja-dispatch-out 260ms 980ms ease-in forwards;
+}
 [data-phase='opening'] .dispatch__wax--l {
-  animation: ja-wax-left 240ms ease-in forwards;
+  animation: ja-wax-left 300ms 110ms cubic-bezier(0.3, 0.9, 0.4, 1) forwards;
 }
 [data-phase='opening'] .dispatch__wax--r {
-  animation: ja-wax-right 240ms ease-in forwards;
+  animation: ja-wax-right 300ms 110ms cubic-bezier(0.3, 0.9, 0.4, 1) forwards;
 }
 [data-phase='opening'] .dispatch__flap {
-  animation: ja-flap-open 420ms 180ms cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+  animation: ja-flap-open 380ms 330ms cubic-bezier(0.3, 0.7, 0.2, 1) forwards;
 }
-[data-phase='opening'] .dispatch__envelope {
-  animation: ja-envelope-sink 340ms 400ms ease-in forwards;
+[data-phase='opening'] .dispatch__letter {
+  animation: ja-letter-out 420ms 640ms cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
 }
 
+@keyframes ja-tense {
+  50% {
+    transform: scale(0.985) rotate(-0.4deg);
+  }
+}
 @keyframes ja-wax-left {
   to {
-    transform: translate(-15px, 26px) rotate(-26deg);
+    transform: translate(-26px, 54px) rotate(-42deg);
     opacity: 0;
   }
 }
 @keyframes ja-wax-right {
   to {
-    transform: translate(15px, 30px) rotate(29deg);
+    transform: translate(26px, 60px) rotate(46deg);
     opacity: 0;
   }
 }
@@ -272,9 +316,16 @@
     opacity: 0;
   }
 }
-@keyframes ja-envelope-sink {
+@keyframes ja-letter-out {
   to {
-    transform: translateY(18px) scale(0.97);
+    /* Far enough that the letter clears the front panel and reads as having
+     * come out, rather than merely shifted. */
+    transform: translateY(-82%) scale(1.04);
+  }
+}
+@keyframes ja-dispatch-out {
+  to {
+    transform: translateY(-10px) scale(0.98);
     opacity: 0;
   }
 }
@@ -300,13 +351,14 @@
   }
 }
 
-/* The guide gates every transition behind this, and a 800ms reveal is exactly
+/* The guide gates every transition behind this, and a 1.2s reveal is exactly
  * what it exists to suppress. The seal itself stays -- it is content and an
  * interaction, not decoration -- it simply opens at once. */
 @media (prefers-reduced-motion: reduce) {
+  .dispatch__envelope,
   .dispatch__wax,
   .dispatch__flap,
-  .dispatch__envelope,
+  .dispatch__letter,
   .ja-rise,
   .ja-stagger {
     animation: none !important;

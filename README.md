@@ -16,8 +16,14 @@ The app has no router. Which view you see is decided entirely by what is in
 | present, all answered         | `<CardResult/>` | The sender, seeing the replies |
 
 The round trip is: sender generates a link → recipient opens it, breaks the
-seal, and answers every question → recipient copies the *new* link the app
-generates → sender opens that and sees the answers. Nothing is transmitted to any server at any point; a URL
+seal, and answers the questions **one at a time** → recipient copies the *new*
+link the app generates → sender opens that and sees the answers.
+
+Questions are presented singly rather than as a form. A card is a conversation,
+not paperwork, and a stack of prompts reads as the latter. A choice advances
+itself on tap — the tap *is* the answer; text and dates get an explicit Next,
+having no natural completion. A review step at the end lists every answer with a
+Change beside it. Nothing is transmitted to any server at any point; a URL
 fragment is never sent in an HTTP request.
 
 ### Payload
@@ -173,9 +179,15 @@ the style guide does not own.
 
 ### The one motion exception
 
-The recipient's card arrives sealed. Breaking the wax cracks the seal, opens the
-flap, and the question rises out of the envelope — about **800ms**, against the
-guide's §8 cap of 240ms and its "no page-transition theater" principle.
+The recipient's card arrives sealed. Breaking the wax cracks the seal, swings
+the flap back, and slides the letter up out of the envelope — about **1.2s**,
+against the guide's §8 cap of 240ms and its "no page-transition theater"
+principle.
+
+The envelope is built from four stacked pieces — back panel, letter, front
+panel, flap — so the letter has somewhere to come from. Without that the flap
+opened onto a blank slab and nothing appeared to leave the envelope, which is
+the difference between motion and a state change.
 
 This is a deliberate exception, recorded here rather than quietly taken. The
 argument for it:
