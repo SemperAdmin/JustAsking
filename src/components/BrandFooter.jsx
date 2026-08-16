@@ -1,3 +1,5 @@
+import { FEEDBACK_URL } from '../lib/app-links'
+
 /**
  * Footer, following the portal's pattern: scarlet rule, wordmark, the standing
  * disclaimer, and the build stamp in mono.
@@ -37,9 +39,21 @@ export default function BrandFooter({ version, buildDate }) {
         </div>
       </div>
 
-      <p className="mt-6 border-t border-border pt-3 text-xs text-subtle-foreground">
-        &copy; {new Date().getFullYear()} Semper Admin. Open-source educational reference.
-      </p>
+      <div className="mt-6 flex flex-col gap-2 border-t border-border pt-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs text-subtle-foreground">
+          &copy; {new Date().getFullYear()} Semper Admin. Open-source educational reference.
+        </p>
+        {/* Opens an externally hosted form in a new tab. Nothing about the open
+         * card goes with it -- not the questions, not the answers, not the URL. */}
+        <a
+          href={FEEDBACK_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs font-medium text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
+        >
+          Send feedback
+        </a>
+      </div>
     </footer>
   )
 }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { MAX_TEXT_ANSWER_LENGTH, kindOf } from '../constants'
 import { encodeState, isComplete } from '../utils/urlState'
+import { blankCardHref } from '../lib/app-links'
 import { Card } from './Layout'
 import Delivery from './Delivery'
 import ShareLink from './ShareLink'
@@ -87,6 +88,22 @@ export default function CardViewer({ card }) {
               </li>
             ))}
           </ol>
+
+          {/* The recipient is the person most likely not to know this app yet.
+           * Opens in a new tab on purpose: they still have a reply link in this
+           * one that nothing else has a copy of, and navigating away from it
+           * would lose it for good. */}
+          <div className="mt-6 border-t border-border pt-4 text-center">
+            <p className="text-sm text-muted-foreground">Want to ask someone something?</p>
+            <a
+              href={blankCardHref()}
+              target="_blank"
+              rel="noopener"
+              className="mt-1 inline-block text-sm font-semibold text-primary underline underline-offset-4"
+            >
+              Make your own card
+            </a>
+          </div>
         </Card>
       ) : (
         <QuestionStep

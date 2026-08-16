@@ -139,6 +139,8 @@ src/
 │   ├── CardCreator.jsx        # build a card, generate a link
 │   ├── CardViewer.jsx         # answer a card, generate the reply link
 │   └── CardResult.jsx         # show the answer that came back
+├── lib/
+│   └── app-links.js           # external destinations, in one place
 ├── hooks/
 │   ├── useColorScheme.js      # dark default, light toggle, persisted
 │   └── useCopyToClipboard.js  # clipboard write with an execCommand fallback
@@ -271,6 +273,28 @@ way an `!important` on a universal selector can be — an `!important` on a more
 specific one, in the `[data-motion='play']` block at the end of
 `justasking.css`. Its durations are restated there and have to stay in step
 with the sequence.
+
+## Outbound links
+
+Two, both deliberate, and neither one a network call the app makes on its own.
+
+**Send feedback** in the footer opens an externally hosted form in a new tab —
+the same `FEEDBACK_URL` SemperScribe and the portal use, kept in
+`src/lib/app-links.js` so a destination change is a one-line edit. Nothing about
+the open card goes with it: not the questions, not the answers, not the current
+URL. Prefilling any of that would hand somebody's card to a third party, which
+is the one promise this app makes. A test asserts the app issues **no** requests
+off-origin.
+
+**Make your own card**, on the recipient's review step, points at the app with
+no fragment. The recipient is the person most likely not to know this app yet,
+so that is where the invitation belongs. It opens in a new tab on purpose: their
+current tab holds a reply link that nothing else has a copy of, and navigating
+away from it would lose it for good.
+
+Note that the feedback form is on a `.mil` host, which a recipient on a personal
+device or off-network may not be able to reach. That is a property of the
+destination, not of this app.
 
 ## Handling untrusted links
 
