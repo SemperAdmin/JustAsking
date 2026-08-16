@@ -364,11 +364,12 @@
   }
 }
 
-/* Playing the sequence on explicit request.
+/* Playing the sequence on a device that asked for reduced motion.
  *
- * Reduce Motion is the right default -- motion nobody asked for should not
- * happen. It is not a veto over motion a reader has just asked for by name, so
- * the seal offers to play it anyway, and this is what lets that request through.
+ * The seal animates by default for everyone -- the product owner's call,
+ * argued in the README -- with a one-tap Skip offered to readers whose device
+ * asked for less motion. This block is what lets the sequence through on those
+ * devices.
  *
  * It has to out-shout the universal
  * `*, *::before, *::after { animation-duration: 0.01ms !important }` that ships
@@ -377,17 +378,17 @@
  * !important on a more specific one. The durations are restated rather than
  * inherited, which means they have to stay in step with the sequence above. */
 @media (prefers-reduced-motion: reduce) {
-  [data-motion='forced'] .dispatch__envelope {
+  [data-motion='play'] .dispatch__envelope {
     animation-duration: 200ms, 260ms !important;
   }
-  [data-motion='forced'] .dispatch__wax--l,
-  [data-motion='forced'] .dispatch__wax--r {
+  [data-motion='play'] .dispatch__wax--l,
+  [data-motion='play'] .dispatch__wax--r {
     animation-duration: 300ms !important;
   }
-  [data-motion='forced'] .dispatch__flap {
+  [data-motion='play'] .dispatch__flap {
     animation-duration: 380ms !important;
   }
-  [data-motion='forced'] .dispatch__letter {
+  [data-motion='play'] .dispatch__letter {
     animation-duration: 420ms !important;
   }
 }

@@ -6,23 +6,36 @@ import { Card } from './Layout'
 const SEQUENCE_MS = 1180
 
 const REDUCED_QUERY = '(prefers-reduced-motion: reduce)'
+const MOTION_KEY = 'justasking:motion'
+
+function storedChoice() {
+  try {
+    const stored = localStorage.getItem(MOTION_KEY)
+    return stored === 'skip' || stored === 'play' ? stored : null
+  } catch {
+    // Private browsing can make localStorage throw on read.
+    return null
+  }
+}
 
 /**
  * Gates the recipient's questions behind a sealed envelope.
  *
- * Opening is a tap, not a timer. That is the whole reason this is allowed to
- * run past the style guide's motion budget: nobody has motion imposed on them
- * on the way to somewhere else, and the wait is something the recipient chose.
+ * The sequence plays by default for everyone, including readers whose device
+ * asks for reduced motion. That is a deliberate override of
+ * `prefers-reduced-motion`, made on the product owner's call and argued in the
+ * README -- the short version being that most people who have the setting on
+ * have it on for battery or taste, and this is a single user-initiated beat
+ * rather than motion imposed on the way to somewhere else.
  *
- * A reader with Reduce Motion enabled gets the seal opened instantly, and is
- * told why -- an animation that silently does not happen is indistinguishable
- * from one that is broken. They can still ask for it explicitly: the OS setting
- * is a default for motion nobody asked for, not a veto over motion someone just
- * requested by name.
+ * It is an override, not a dismissal. A reader whose device asked for less
+ * motion is told the seal animates and given one tap to turn it off, and that
+ * choice is remembered. Some people have the setting on because animation makes
+ * them ill, and they should not have to sit through this on every card.
  */
 export default function SealedDispatch({ children }) {
   const [phase, setPhase] = useState('sealed')
-  const [forced, setForced] = useState(false)
+  const [choice, setChoice] = useState(storedChoice)
   const [reduced, setReduced] = useState(
     () => window.matchMedia?.(REDUCED_QUERY).matches ?? false,
   )
@@ -40,26 +53,36 @@ export default function SealedDispatch({ children }) {
     return () => query.removeEventListener('change', onChange)
   }, [])
 
-  const open = useCallback(
-    (force = false) => {
-      if (phase !== 'sealed') return
-      if (reduced && !force) {
-        setPhase('open')
-        return
-      }
-      // Marks the subtree so the forced-play block in justasking.css can
-      // override the token mirror's blanket animation suppression.
-      if (force) setForced(true)
-      setPhase('opening')
-      timerRef.current = setTimeout(() => setPhase('open'), SEQUENCE_MS)
-    },
-    [phase, reduced],
-  )
+  // Animation is the default; only an explicit "skip" turns it off.
+  const willAnimate = choice !== 'skip'
+
+  const open = useCallback((animate) => {
+    setPhase(animate ? 'opening' : 'open')
+    if (!animate) return
+    timerRef.current = setTimeout(() => setPhase('open'), SEQUENCE_MS)
+  }, [])
+
+  /** Record a preference and act on it in the same tap. */
+  function chooseAndOpen(mode) {
+    setChoice(mode)
+    try {
+      localStorage.setItem(MOTION_KEY, mode)
+    } catch {
+      // Not being able to persist the choice is not worth failing over.
+    }
+    open(mode === 'play')
+  }
 
   if (phase === 'open') return children
 
   return (
-    <Card className="text-center" data-phase={phase} data-motion={forced ? 'forced' : undefined}>
+    <Card
+      className="text-center"
+      data-phase={phase}
+      // Marks the subtree so the play block in justasking.css can override the
+      // token mirror's blanket animation suppression on a reduced-motion device.
+      data-motion={phase === 'opening' ? 'play' : undefined}
+    >
       <p className="eyebrow">Sealed dispatch</p>
       <p className="mt-2 text-sm text-muted-foreground">
         Someone has addressed a question to you.
@@ -87,23 +110,40 @@ export default function SealedDispatch({ children }) {
 
       <button
         type="button"
-        onClick={() => open()}
+        onClick={() => open(willAnimate)}
         disabled={phase === 'opening'}
         className="mt-6 w-full rounded-button bg-primary px-4 py-3 font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-70"
       >
         {phase === 'opening' ? 'Opening…' : 'Break the seal'}
       </button>
 
+      {/* Only surfaced to readers whose device asked for less motion. Everyone
+       * else gets the sequence without being asked a question about it. */}
       {reduced && phase === 'sealed' ? (
         <p className="mt-3 text-xs text-muted-foreground">
-          Reduce Motion is on for this device, so this opens instantly.{' '}
-          <button
-            type="button"
-            onClick={() => open(true)}
-            className="font-medium text-foreground underline underline-offset-4"
-          >
-            Play the animation anyway
-          </button>
+          {willAnimate ? (
+            <>
+              This card animates as it opens.{' '}
+              <button
+                type="button"
+                onClick={() => chooseAndOpen('skip')}
+                className="font-medium text-foreground underline underline-offset-4"
+              >
+                Skip the animation
+              </button>
+            </>
+          ) : (
+            <>
+              The animation is off on this device.{' '}
+              <button
+                type="button"
+                onClick={() => chooseAndOpen('play')}
+                className="font-medium text-foreground underline underline-offset-4"
+              >
+                Play it
+              </button>
+            </>
+          )}
         </p>
       ) : null}
     </Card>

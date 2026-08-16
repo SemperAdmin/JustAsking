@@ -196,28 +196,40 @@ argument for it:
   standing between a reader and what they came for. This is not incidental. It
   is the single beat the product exists for: someone was asked something.
 - It is **user-initiated**. Nothing animates on arrival; the sequence runs only
-  when the recipient taps "Break the seal", so the wait is chosen rather than
-  imposed.
+  when the recipient taps "Break the seal".
 - It happens **once**, on one view, and never on the sender's side.
 
-Everything else in the app stays inside the budget. And the exception is not
-taken at anyone's expense: under `prefers-reduced-motion: reduce` the whole
-sequence is removed and the card opens instantly. The seal itself remains, since
-it is content and an interaction rather than decoration.
+Everything else in the app stays inside the budget.
 
-The seal also *says* so, and offers to play it anyway. Two reasons. An animation
-that silently does not happen is indistinguishable from one that is broken —
-which is exactly how this was first reported. And Reduce Motion is the right
-default for motion nobody asked for, not a veto over motion a reader has just
-asked for by name.
+#### It also overrides `prefers-reduced-motion`
 
-Letting that request through takes some force: the brand token mirror ships a
-universal `*, *::before, *::after { animation-duration: 0.01ms !important }`.
-That rule is correct and the mirror is read-only, so the opt-in beats it the
-only way an `!important` on a universal selector can be beaten — an `!important`
-on a more specific one, in the `[data-motion='forced']` block at the end of
-`justasking.css`. Its durations are restated there and have to stay in step with
-the sequence.
+The sequence plays by default for everyone, including devices asking for
+reduced motion. This is the product owner's call, taken knowingly, and it is
+the part of this app most worth revisiting.
+
+The case for it: most people with the setting on have it on for battery or
+taste, this is one user-initiated beat rather than motion imposed on the way
+somewhere, and the seal is the product's only moment of delight.
+
+The case against it, which is not nothing: the setting also exists for people
+whose vestibular disorders or migraines are triggered by animation, and for
+them a media query is not a preference but an accommodation. Overriding it by
+default is normally poor practice, and it is worth changing your mind about if
+anyone ever reports feeling ill.
+
+So it is an override, not a dismissal. A reader whose device asked for less
+motion is told the card animates and given one tap to turn it off, and that
+choice is remembered in `localStorage` so they never sit through it twice.
+Readers who did not ask for reduced motion are shown no control at all.
+
+Letting the sequence run on those devices takes some force: the brand token
+mirror ships a universal
+`*, *::before, *::after { animation-duration: 0.01ms !important }`. That rule
+is correct as a default and the mirror is read-only, so it is beaten the only
+way an `!important` on a universal selector can be — an `!important` on a more
+specific one, in the `[data-motion='play']` block at the end of
+`justasking.css`. Its durations are restated there and have to stay in step
+with the sequence.
 
 ## Handling untrusted links
 
