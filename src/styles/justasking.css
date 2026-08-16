@@ -20,8 +20,7 @@
  * something the reader can actually see. The accent is the brand primary.
  */
 
-/* Tint the gradient accent with the active role instead of always running
- * scarlet-to-brass, so the hero keyword matches the card's audience. */
+/* The hero keyword's gradient, running the brand primary into brass. */
 .gradient-accent {
   background: linear-gradient(
     95deg,
@@ -94,6 +93,13 @@
   position: relative;
   aspect-ratio: 8 / 5;
   width: 100%;
+
+  /* The stage is a container so its scenery can be sized in `cqw` -- percent of
+   * the stage's own width. The creator renders a smaller stage than the
+   * recipient's, and with fixed sizes the seal came out oversized and the stamp
+   * wrapped onto two lines there but one line at full size. A preview that is
+   * not to scale is worth less than no preview. */
+  container-type: inline-size;
 }
 
 /* Shared paper surface, used by the envelope, the orders and the scroll. */
@@ -174,9 +180,9 @@
   position: absolute;
   left: 50%;
   top: 62%;
-  width: 4.25rem;
-  height: 4.25rem;
-  margin: -2.125rem 0 0 -2.125rem;
+  width: 21cqw;
+  height: 21cqw;
+  margin: -10.5cqw 0 0 -10.5cqw;
 }
 
 .env__wax {
@@ -210,7 +216,7 @@
  * carries the display face instead. */
 .env__sigil {
   font-family: var(--font-display);
-  font-size: 1.75rem;
+  font-size: 8.6cqw;
   letter-spacing: 0.06em;
   line-height: 1;
   color: color-mix(in srgb, var(--color-parchment) 88%, transparent);
@@ -306,11 +312,12 @@
   top: 55%;
   translate: -50% -50%;
   rotate: -13deg;
-  padding: 0.4rem 0.9rem;
-  border: 3px solid var(--color-usmc-scarlet);
+  padding: 2cqw 4.5cqw;
+  border: 0.95cqw solid var(--color-usmc-scarlet);
   border-radius: var(--radius-xs);
   font-family: var(--font-display);
-  font-size: 1.5rem;
+  font-size: 7.5cqw;
+  white-space: nowrap;
   letter-spacing: 0.08em;
   line-height: 1.1;
   color: var(--color-usmc-scarlet);
@@ -376,7 +383,7 @@
 
 .wire__label {
   font-family: var(--font-mono);
-  font-size: 0.8125rem;
+  font-size: 4cqw;
   letter-spacing: 0.18em;
   color: var(--color-primary);
 }
@@ -384,11 +391,11 @@
 .wire__bars {
   display: flex;
   align-items: flex-end;
-  gap: 4px;
-  height: 1.5rem;
+  gap: 1.2cqw;
+  height: 7.5cqw;
 }
 .wire__bars span {
-  width: 6px;
+  width: 1.9cqw;
   height: 25%;
   border-radius: 1px;
   background: var(--color-primary);
@@ -594,4 +601,16 @@
   [data-motion='play'] * {
     animation-duration: var(--dur, 0.01ms) !important;
   }
+}
+
+/* The creator's preview holds its final frame instead of fading out. The real
+ * delivery fades because the questions replace it; here there is nothing to
+ * replace it with, and the end state -- letter out, stamp landed, scroll
+ * unrolled -- is the part the sender is trying to see.
+ *
+ * Specificity has to match the per-style stage rules above, so this carries the
+ * same three attribute selectors and comes later in the file. */
+[data-preview][data-delivery][data-phase='opening'] .delivery__stage {
+  --dur: 200ms;
+  animation: ja-tense 200ms ease-out both;
 }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { deliveryOf } from '../constants'
 import { Card } from './Layout'
+import DeliveryStage from './DeliveryStage'
 
 const REDUCED_QUERY = '(prefers-reduced-motion: reduce)'
 const MOTION_KEY = 'justasking:motion'
@@ -14,52 +15,6 @@ function storedChoice() {
     // Private browsing can make localStorage throw on read.
     return null
   }
-}
-
-/** The four stages. Markup only -- justasking.css drives every sequence. */
-const STAGES = {
-  env: () => (
-    <>
-      {/* Back to front: back panel, letter, front panel, flap, seal. */}
-      <div className="env__back" />
-      <div className="env__letter paper-ruled" />
-      <div className="env__front" />
-      <div className="env__flap" />
-      <div className="env__seal">
-        <span className="env__wax env__wax--l" aria-hidden="true">
-          <span className="env__sigil">SA</span>
-        </span>
-        <span className="env__wax env__wax--r" aria-hidden="true">
-          <span className="env__sigil">SA</span>
-        </span>
-      </div>
-    </>
-  ),
-  stamp: () => (
-    <>
-      <div className="stamp__page paper-ruled" />
-      <div className="stamp__mark">FOR ACTION</div>
-    </>
-  ),
-  wire: () => (
-    <div className="wire__panel">
-      <p className="wire__label">INCOMING</p>
-      <div className="wire__bars" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-      </div>
-      <div className="wire__scan" aria-hidden="true" />
-    </div>
-  ),
-  scroll: () => (
-    <>
-      <div className="scroll__body paper-ruled" />
-      <div className="scroll__rod scroll__rod--top" />
-      <div className="scroll__rod scroll__rod--bottom" />
-      <div className="scroll__cord" />
-    </>
-  ),
 }
 
 /**
@@ -77,7 +32,6 @@ const STAGES = {
  */
 export default function Delivery({ styleId, children }) {
   const delivery = deliveryOf(styleId)
-  const Stage = STAGES[delivery.id] ?? STAGES.env
 
   const [phase, setPhase] = useState('sealed')
   const [choice, setChoice] = useState(storedChoice)
@@ -138,9 +92,7 @@ export default function Delivery({ styleId, children }) {
       </p>
 
       <div className="delivery mx-auto mt-6 max-w-xs">
-        <div className="delivery__stage">
-          <Stage />
-        </div>
+        <DeliveryStage id={delivery.id} />
       </div>
 
       <button

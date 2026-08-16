@@ -9,6 +9,7 @@ import {
 } from '../constants'
 import { createEmptyQuestion, encodeState, projectedAnsweredLength } from '../utils/urlState'
 import { Card } from './Layout'
+import DeliveryPreview from './DeliveryPreview'
 import QuestionEditor from './QuestionEditor'
 import ShareLink from './ShareLink'
 
@@ -98,7 +99,7 @@ export default function CardCreator() {
         JUST <span className="gradient-accent">ASKING</span>
       </h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Build the questions, pick who you are asking, and send the link. No accounts and no
+        Build the questions, choose how the card arrives, and send the link. No accounts and no
         server &mdash; the whole card travels inside the URL.
       </p>
 
@@ -136,6 +137,8 @@ export default function CardCreator() {
               </label>
             ))}
           </div>
+
+          <DeliveryPreview styleId={delivery} />
         </fieldset>
 
         <div className="space-y-3">

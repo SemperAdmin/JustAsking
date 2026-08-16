@@ -197,6 +197,19 @@ portal has role-differentiated *content*; JustAsking has none, so it was
 decoration wearing a semantic costume. The accent is now the brand primary
 throughout.
 
+The creator previews the selected style, so a sender is not choosing between
+four things by name alone and first seeing the result when they open their own
+link. Selecting a style replays it; arriving on the page does not, since an
+animation nobody asked for on load is what the motion budget exists to prevent.
+The preview holds its final frame rather than fading out — the end state is the
+part worth seeing — and shares its scenery with the real delivery through
+`DeliveryStage`, so the two cannot drift.
+
+Scenery is sized in `cqw`, percent of the stage's own width, because the
+creator's stage is smaller than the recipient's. With fixed sizes the seal came
+out oversized in the preview and the stamp wrapped onto two lines there but one
+at full size; a preview that is not to scale is worth less than no preview.
+
 Each style declares its own duration in `constants.js`, and that number has to
 stay in step with the CSS. Every animated element also declares `--dur`
 alongside its animation, which is what lets the reduced-motion opt-in re-enable
