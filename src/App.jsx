@@ -5,7 +5,7 @@ import CardResult from './components/CardResult'
 import CardViewer from './components/CardViewer'
 import Layout from './components/Layout'
 import { DEFAULT_ROLE } from './constants'
-import { decodeState } from './utils/urlState'
+import { decodeState, isComplete } from './utils/urlState'
 
 /** True when there is a fragment worth trying to decode. */
 function hasHash() {
@@ -17,9 +17,9 @@ function hasHash() {
  *
  * The URL fragment is the only source of truth for which view is showing:
  *
- *   no hash            -> <CardCreator/>   somebody is starting a card
- *   hash, `a` empty    -> <CardViewer/>    somebody was asked something
- *   hash, `a` filled   -> <CardResult/>    the answer came back
+ *   no hash                  -> <CardCreator/>  somebody is starting a card
+ *   hash, a question open    -> <CardViewer/>   somebody was asked something
+ *   hash, every one answered -> <CardResult/>   the answers came back
  *
  * A hash that fails to decode is treated as no hash at all, with a note
  * explaining why -- links get truncated by chat apps often enough that a blank
@@ -67,7 +67,7 @@ export default function App() {
           ) : null}
           <CardCreator onRoleChange={setDraftRole} />
         </>
-      ) : card.a ? (
+      ) : isComplete(card) ? (
         <CardResult card={card} onReset={handleReset} />
       ) : (
         <CardViewer card={card} />

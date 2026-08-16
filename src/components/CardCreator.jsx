@@ -3,14 +3,36 @@ import { useMemo, useState } from 'react'
 import {
   DEFAULT_ROLE,
   MAX_OPTIONS,
-  MAX_OPTION_LENGTH,
-  MAX_QUESTION_LENGTH,
-  MIN_OPTIONS,
+  MAX_QUESTIONS,
   ROLES,
+  URL_LENGTH_HARD_MAX,
 } from '../constants'
-import { encodeState } from '../utils/urlState'
+import { createEmptyQuestion, encodeState, projectedAnsweredLength } from '../utils/urlState'
 import { Card } from './Layout'
+import QuestionEditor from './QuestionEditor'
 import ShareLink from './ShareLink'
+
+/**
+ * Trim a draft question down to what is worth sending.
+ * Returns null if there is nothing answerable in it.
+ */
+function finalize(question) {
+  const prompt = question.p.trim()
+  if (!prompt) return null
+
+  if (question.k === 'c') {
+    const options = question.o
+      .map((option) => option.trim())
+      .filter(Boolean)
+      .slice(0, MAX_OPTIONS)
+    if (options.length === 0) return null
+    return { p: prompt, k: 'c', o: options, a: '' }
+  }
+
+  // Text and date questions carry no options; sending an empty array would be
+  // dead weight in a payload measured in URL characters.
+  return { p: prompt, k: question.k, a: '' }
+}
 
 /**
  * The sender's view: build a card and turn it into a link.
@@ -19,91 +41,75 @@ import ShareLink from './ShareLink'
  * nothing is committed to the URL until "Generate link" is pressed.
  */
 export default function CardCreator({ onRoleChange }) {
-  const [question, setQuestion] = useState('')
   const [role, setRole] = useState(DEFAULT_ROLE)
-  const [options, setOptions] = useState(['Yes', 'No'])
+  const [questions, setQuestions] = useState(() => [createEmptyQuestion()])
   const [generatedUrl, setGeneratedUrl] = useState('')
+  const [tooLong, setTooLong] = useState(false)
 
-  const trimmedOptions = useMemo(
-    () => options.map((option) => option.trim()).filter(Boolean),
-    [options],
-  )
+  const ready = useMemo(() => questions.map(finalize).filter(Boolean), [questions])
+  const canGenerate = ready.length === questions.length && ready.length > 0
 
-  const canGenerate = question.trim().length > 0 && trimmedOptions.length >= MIN_OPTIONS
-
-  function updateOption(index, value) {
-    setOptions((current) => current.map((option, i) => (i === index ? value : option)))
+  function reset() {
     setGeneratedUrl('')
+    setTooLong(false)
   }
 
-  function addOption() {
-    if (options.length >= MAX_OPTIONS) return
-    setOptions((current) => [...current, ''])
-    setGeneratedUrl('')
+  function update(index, next) {
+    setQuestions((current) => current.map((question, i) => (i === index ? next : question)))
+    reset()
   }
 
-  function removeOption(index) {
-    if (options.length <= MIN_OPTIONS) return
-    setOptions((current) => current.filter((_, i) => i !== index))
-    setGeneratedUrl('')
+  function addQuestion() {
+    if (questions.length >= MAX_QUESTIONS) return
+    setQuestions((current) => [...current, createEmptyQuestion()])
+    reset()
+  }
+
+  function removeQuestion(index) {
+    if (questions.length <= 1) return
+    setQuestions((current) => current.filter((_, i) => i !== index))
+    reset()
   }
 
   function handleRoleChange(nextRole) {
     setRole(nextRole)
     // Let <App/> repaint the accent immediately so the picker doubles as a preview.
     onRoleChange?.(nextRole)
-    setGeneratedUrl('')
+    reset()
   }
 
   function handleSubmit(event) {
     event.preventDefault()
     if (!canGenerate) return
 
-    // `a` starts empty: that emptiness is what routes the recipient to the viewer.
-    setGeneratedUrl(
-      encodeState({
-        q: question.trim(),
-        t: role,
-        o: trimmedOptions,
-        a: '',
-      }),
-    )
+    // Refuse a card whose *answered* form would not survive the return trip,
+    // rather than letting the recipient hit the wall instead.
+    const card = { t: role, q: ready }
+    if (projectedAnsweredLength(card) > URL_LENGTH_HARD_MAX) {
+      setGeneratedUrl('')
+      setTooLong(true)
+      return
+    }
+
+    // Answers start empty: that emptiness is what routes the recipient to the
+    // viewer rather than the result.
+    setTooLong(false)
+    setGeneratedUrl(encodeState(card))
   }
 
   return (
     <Card>
-      <p className="eyebrow">Ask one question</p>
+      <p className="eyebrow">Ask, and get an answer back</p>
       {/* The single Bebas Neue hero surface for this fold. */}
       <h1 className="wordmark mt-2 text-4xl text-foreground">
         JUST <span className="gradient-accent">ASKING</span>
       </h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Write the question, pick who you are asking, and send the link. No accounts and no
+        Build the questions, pick who you are asking, and send the link. No accounts and no
         server &mdash; the whole card travels inside the URL.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-6">
-        <div>
-          <label htmlFor="question" className="eyebrow block">
-            Question
-          </label>
-          <textarea
-            id="question"
-            value={question}
-            maxLength={MAX_QUESTION_LENGTH}
-            rows={3}
-            onChange={(event) => {
-              setQuestion(event.target.value)
-              setGeneratedUrl('')
-            }}
-            placeholder="Can you cover the duty on Friday?"
-            className="mt-2 w-full resize-none rounded-button border border-input bg-bg-sunken px-3 py-2 text-foreground placeholder:text-subtle-foreground"
-          />
-          <p className="mt-1 text-right font-mono text-xs text-subtle-foreground">
-            {question.length}/{MAX_QUESTION_LENGTH}
-          </p>
-        </div>
-
         <fieldset>
           <legend className="eyebrow">Addressed to</legend>
           <div className="mt-2 grid grid-cols-2 gap-2">
@@ -126,10 +132,7 @@ export default function CardCreator({ onRoleChange }) {
                   className="sr-only"
                 />
                 <span className="flex items-center gap-2">
-                  <span
-                    aria-hidden="true"
-                    className="size-2.5 shrink-0 rounded-chip bg-primary"
-                  />
+                  <span aria-hidden="true" className="size-2.5 shrink-0 rounded-chip bg-primary" />
                   <span className="text-sm font-semibold text-foreground">{option.label}</span>
                 </span>
                 <span className="mt-0.5 block text-xs text-muted-foreground">
@@ -140,49 +143,35 @@ export default function CardCreator({ onRoleChange }) {
           </div>
         </fieldset>
 
-        <fieldset>
-          <legend className="eyebrow">Answers offered</legend>
-          <div className="mt-2 space-y-2">
-            {options.map((option, index) => (
-              // Index keys are safe here: rows have no internal state of their own
-              // and the value is fully controlled by `options`.
-              <div key={index} className="flex gap-2">
-                <input
-                  type="text"
-                  value={option}
-                  maxLength={MAX_OPTION_LENGTH}
-                  onChange={(event) => updateOption(index, event.target.value)}
-                  placeholder={`Option ${index + 1}`}
-                  aria-label={`Answer option ${index + 1}`}
-                  className="w-full min-w-0 rounded-button border border-input bg-bg-sunken px-3 py-2 text-foreground placeholder:text-subtle-foreground"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeOption(index)}
-                  disabled={options.length <= MIN_OPTIONS}
-                  aria-label={`Remove answer option ${index + 1}`}
-                  className="shrink-0 rounded-button border border-border px-3 text-muted-foreground transition-colors hover:border-border-strong hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  &times;
-                </button>
-              </div>
-            ))}
-          </div>
+        <div className="space-y-3">
+          {questions.map((question, index) => (
+            // Index keys are acceptable here: removing a question rebuilds the
+            // list from the parent's state and no row holds state of its own.
+            <QuestionEditor
+              key={index}
+              question={question}
+              index={index}
+              total={questions.length}
+              onChange={(next) => update(index, next)}
+              onRemove={() => removeQuestion(index)}
+            />
+          ))}
 
-          {options.length < MAX_OPTIONS ? (
+          {questions.length < MAX_QUESTIONS ? (
             <button
               type="button"
-              onClick={addOption}
-              className="mt-2 rounded-button border border-dashed border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-border-strong hover:text-foreground"
+              onClick={addQuestion}
+              className="w-full rounded-button border border-dashed border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-border-strong hover:text-foreground"
             >
-              + Add option
+              + Add another question
             </button>
           ) : (
-            <p className="mt-2 text-xs text-muted-foreground">
-              That is the maximum of {MAX_OPTIONS} options.
+            <p className="text-xs text-muted-foreground">
+              That is the maximum of {MAX_QUESTIONS} questions &mdash; more would push the link
+              past what chat apps carry reliably.
             </p>
           )}
-        </fieldset>
+        </div>
 
         <button
           type="submit"
@@ -192,6 +181,16 @@ export default function CardCreator({ onRoleChange }) {
           Generate link
         </button>
       </form>
+
+      {tooLong ? (
+        <div className="mt-6 rounded-button border border-destructive/60 bg-bg-sunken px-4 py-3 text-sm text-foreground">
+          <p className="font-semibold">This card is too long to send as a link.</p>
+          <p className="mt-1 text-muted-foreground">
+            Once answered it would not fit in a URL that chat apps carry reliably. Shorten a
+            prompt, drop an option, or remove a question.
+          </p>
+        </div>
+      ) : null}
 
       {generatedUrl ? (
         <div className="mt-6 border-t border-border pt-6">

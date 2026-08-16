@@ -1,11 +1,14 @@
 import LZString from 'lz-string'
 
 import {
+  DEFAULT_KIND,
   DEFAULT_ROLE,
-  MAX_ANSWER_LENGTH,
-  MAX_OPTIONS,
+  KIND_IDS,
   MAX_OPTION_LENGTH,
-  MAX_QUESTION_LENGTH,
+  MAX_OPTIONS,
+  MAX_PROMPT_LENGTH,
+  MAX_QUESTIONS,
+  MAX_TEXT_ANSWER_LENGTH,
   ROLE_IDS,
 } from '../constants.js'
 
@@ -14,22 +17,27 @@ import {
  * two or three characters of URL after compression, and the whole point of the
  * app is that the card fits in a link somebody can paste into a text message.
  *
- *   q -> question prompt      (string)
  *   t -> role accent id       (string)
- *   o -> response options     (string[])
- *   a -> selected answer      (string, empty until the recipient picks)
+ *   q -> questions            (array, 1..MAX_QUESTIONS)
+ *
+ * and per question:
+ *
+ *   p -> prompt               (string)
+ *   k -> kind                 ('c' choice | 'x' text | 'd' date | 'dt' date+time)
+ *   o -> options              (string[], choice only)
+ *   a -> answer               (string, empty until the recipient answers)
  */
 
-export const EMPTY_STATE = {
-  q: '',
-  t: DEFAULT_ROLE,
+export const EMPTY_QUESTION = {
+  p: '',
+  k: DEFAULT_KIND,
   o: ['Yes', 'No'],
   a: '',
 }
 
-/** A brand-new card, safe to hand straight to <CardCreator/>. */
-export function createEmptyState() {
-  return { ...EMPTY_STATE, o: [...EMPTY_STATE.o] }
+/** A brand-new question, safe to push straight into the creator's draft. */
+export function createEmptyQuestion() {
+  return { ...EMPTY_QUESTION, o: [...EMPTY_QUESTION.o] }
 }
 
 /**
@@ -50,6 +58,68 @@ function toSafeString(value, maxLength) {
     .slice(0, maxLength)
 }
 
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+const DATETIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/
+
+/**
+ * Check that a date string is both well-formed and a real calendar moment.
+ *
+ * The shape test alone would accept 2026-02-31. The parts are compared back
+ * against a constructed date to reject anything that rolled over, and the date
+ * is built from its components rather than parsed from the string, because
+ * `new Date('2026-08-16')` is treated as UTC and lands on the previous day for
+ * anyone west of Greenwich.
+ */
+function isRealDate(value, withTime) {
+  if (!(withTime ? DATETIME_RE : DATE_RE).test(value)) return false
+
+  const [datePart, timePart = '00:00'] = value.split('T')
+  const [y, m, d] = datePart.split('-').map(Number)
+  const [hh, mm] = timePart.split(':').map(Number)
+
+  if (hh > 23 || mm > 59) return false
+
+  const probe = new Date(y, m - 1, d)
+  return probe.getFullYear() === y && probe.getMonth() === m - 1 && probe.getDate() === d
+}
+
+/**
+ * Normalize one decoded question. Returns null if it is not answerable.
+ */
+function sanitizeQuestion(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+
+  const prompt = toSafeString(raw.p, MAX_PROMPT_LENGTH)
+  if (!prompt) return null
+
+  const kind = KIND_IDS.includes(raw.k) ? raw.k : DEFAULT_KIND
+
+  if (kind === 'c') {
+    const options = (Array.isArray(raw.o) ? raw.o : [])
+      .map((option) => toSafeString(option, MAX_OPTION_LENGTH))
+      .filter((option) => option.length > 0)
+      .slice(0, MAX_OPTIONS)
+
+    // A choice with nothing to choose is not answerable.
+    if (options.length === 0) return null
+
+    // The answer only counts if it is one of the options actually offered. This
+    // stops a tampered link from displaying a reply the recipient never gave.
+    const claimed = toSafeString(raw.a, MAX_OPTION_LENGTH)
+    return { p: prompt, k: kind, o: options, a: options.includes(claimed) ? claimed : '' }
+  }
+
+  if (kind === 'd' || kind === 'dt') {
+    const claimed = toSafeString(raw.a, 32)
+    // A malformed or impossible date is dropped rather than displayed. It would
+    // render harmlessly as text, but it would still be a lie about what the
+    // recipient picked.
+    return { p: prompt, k: kind, a: isRealDate(claimed, kind === 'dt') ? claimed : '' }
+  }
+
+  return { p: prompt, k: kind, a: toSafeString(raw.a, MAX_TEXT_ANSWER_LENGTH) }
+}
+
 /**
  * Normalize a decoded payload into the exact shape the components expect.
  * Missing keys get defaults; junk keys are dropped.
@@ -57,26 +127,73 @@ function toSafeString(value, maxLength) {
 export function sanitizeState(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
 
-  const question = toSafeString(raw.q, MAX_QUESTION_LENGTH)
+  // Links minted before cards could hold more than one question carried the
+  // prompt as `q` and the options beside it. Lift that shape into a
+  // single-question card so old links keep opening.
+  const rawQuestions = Array.isArray(raw.q)
+    ? raw.q
+    : typeof raw.q === 'string'
+      ? [{ p: raw.q, k: 'c', o: raw.o, a: raw.a }]
+      : []
 
-  const options = (Array.isArray(raw.o) ? raw.o : [])
-    .map((option) => toSafeString(option, MAX_OPTION_LENGTH))
-    .filter((option) => option.length > 0)
-    .slice(0, MAX_OPTIONS)
+  const questions = rawQuestions
+    .slice(0, MAX_QUESTIONS)
+    .map(sanitizeQuestion)
+    .filter(Boolean)
 
-  // A card without a question or without anything to click is not answerable.
-  if (!question || options.length === 0) return null
+  // A card with nothing answerable in it is not a card.
+  if (questions.length === 0) return null
 
-  // An unrecognised accent falls back rather than failing the card. Links
-  // minted before the role accents replaced the old theme names land here.
   const role = ROLE_IDS.includes(raw.t) ? raw.t : DEFAULT_ROLE
 
-  // The answer only counts if it is one of the options actually offered. This
-  // stops a tampered link from displaying a reply the recipient never gave.
-  const claimedAnswer = toSafeString(raw.a, MAX_ANSWER_LENGTH)
-  const answer = options.includes(claimedAnswer) ? claimedAnswer : ''
+  return { t: role, q: questions }
+}
 
-  return { q: question, t: role, o: options, a: answer }
+/** True once every question on the card carries an answer. */
+export function isComplete(card) {
+  return Boolean(card) && card.q.every((question) => question.a !== '')
+}
+
+/**
+ * High-entropy filler, used only to size the worst case a free-text answer
+ * could reach. A repeated character would compress to nothing and make the
+ * projection below far too optimistic.
+ */
+function incompressible(length) {
+  const alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,'
+  let seed = 1
+  let out = ''
+  for (let i = 0; i < length; i++) {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff
+    out += alphabet[seed % alphabet.length]
+  }
+  return out
+}
+
+/**
+ * How long this card's link could get once every question is answered.
+ *
+ * The sender's link is only half the journey: the recipient adds their answers
+ * and sends a longer link back. Measuring the *answered* form up front is what
+ * lets the creator promise that a card it accepts can always make the return
+ * trip -- rather than the recipient discovering at the end that their reply no
+ * longer fits.
+ */
+export function projectedAnsweredLength(card) {
+  const filled = {
+    ...card,
+    q: card.q.map((question) => {
+      if (question.k === 'c') {
+        // The longest option is the worst this answer can actually be.
+        const longest = question.o.reduce((a, b) => (b.length > a.length ? b : a), '')
+        return { ...question, a: longest }
+      }
+      if (question.k === 'd') return { ...question, a: '2026-12-31' }
+      if (question.k === 'dt') return { ...question, a: '2026-12-31T23:59' }
+      return { ...question, a: incompressible(MAX_TEXT_ANSWER_LENGTH) }
+    }),
+  }
+  return encodeState(filled).length
 }
 
 /**
