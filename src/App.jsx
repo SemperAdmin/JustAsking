@@ -4,7 +4,7 @@ import CardCreator from './components/CardCreator'
 import CardResult from './components/CardResult'
 import CardViewer from './components/CardViewer'
 import Layout from './components/Layout'
-import { THEMES } from './constants'
+import { DEFAULT_ROLE } from './constants'
 import { decodeState } from './utils/urlState'
 
 /** True when there is a fragment worth trying to decode. */
@@ -29,8 +29,8 @@ export default function App() {
   const [card, setCard] = useState(() => decodeState(window.location.hash))
   const [linkWasBroken, setLinkWasBroken] = useState(() => hasHash() && !decodeState(window.location.hash))
 
-  // Theme shown while the creator is open, before any card exists.
-  const [draftTheme, setDraftTheme] = useState(THEMES[0].id)
+  // Accent shown while the creator is open, before any card exists.
+  const [draftRole, setDraftRole] = useState(DEFAULT_ROLE)
 
   // Keep the view in step with the address bar: the back button after a reset,
   // or someone pasting a different card into the same tab.
@@ -53,19 +53,19 @@ export default function App() {
     setLinkWasBroken(false)
   }, [])
 
-  const theme = card?.t ?? draftTheme
+  const role = card?.t ?? draftRole
 
   return (
-    <Layout theme={theme}>
+    <Layout role={role}>
       {card === null ? (
         <>
           {linkWasBroken ? (
-            <div className="mb-4 rounded-card border border-edge bg-surface px-4 py-3 text-sm text-muted">
+            <div className="mb-4 rounded-card border border-border bg-surface-2 px-4 py-3 text-sm text-muted-foreground">
               That link couldn&rsquo;t be read &mdash; it was probably cut short in transit. Ask
               whoever sent it to paste the whole thing, or start your own card below.
             </div>
           ) : null}
-          <CardCreator onThemeChange={setDraftTheme} />
+          <CardCreator onRoleChange={setDraftRole} />
         </>
       ) : card.a ? (
         <CardResult card={card} onReset={handleReset} />

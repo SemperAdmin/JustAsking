@@ -1,41 +1,41 @@
-import { useEffect } from 'react'
+import useColorScheme from '../hooks/useColorScheme'
+import BrandFooter from './BrandFooter'
+import BrandHeader from './BrandHeader'
+
+// Stamped at build time by Vite so the footer reports the deployed build
+// rather than the moment the page happened to be opened.
+const BUILD_DATE = __BUILD_DATE__
+const BUILD_VERSION = __APP_VERSION__
 
 /**
- * Themed page shell.
+ * Page shell.
  *
- * `data-theme` is the single place a card's `t` value touches presentation.
- * It selects a palette that already exists in themes.css, so a malicious link
- * can pick a look but never supply one.
+ * `data-role` is the single place a card's `t` value touches presentation. It
+ * selects a role accent that already exists in justasking.css, so a malicious
+ * link can pick an accent but never supply one.
  */
-export default function Layout({ theme = 'default', children }) {
-  // The palette also has to reach <html>: the page gradient and base font are
-  // set on <body>, and the browser paints the overscroll area from <html>.
-  // Setting it only on the wrapper below would leave those on the default theme.
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme
-    return () => {
-      delete document.documentElement.dataset.theme
-    }
-  }, [theme])
+export default function Layout({ role = 'marine', children }) {
+  const { scheme, toggle } = useColorScheme()
 
   return (
     <div
-      data-theme={theme}
-      className="ja-themed flex min-h-screen flex-col items-center justify-center px-4 py-10"
+      data-role={role}
+      className="ambient-bloom flex min-h-screen flex-col items-center px-4 py-8 sm:py-12"
     >
-      <main className="w-full max-w-xl">{children}</main>
-      <footer className="mt-8 text-center text-xs text-muted">
-        JustAsking &middot; everything lives in the link, nothing is stored on a server
-      </footer>
+      <div className="flex w-full max-w-xl flex-1 flex-col">
+        <BrandHeader scheme={scheme} onToggleScheme={toggle} />
+        <main className="flex flex-1 flex-col justify-center">{children}</main>
+        <BrandFooter version={BUILD_VERSION} buildDate={BUILD_DATE} />
+      </div>
     </div>
   )
 }
 
-/** The white panel every view sits inside. */
+/** The panel every view sits inside. 24px padding per the spacing scale. */
 export function Card({ children, className = '' }) {
   return (
     <div
-      className={`ja-themed rounded-card border border-edge bg-surface p-6 shadow-xl shadow-black/5 sm:p-8 ${className}`}
+      className={`rounded-card border border-border bg-card p-5 shadow-card sm:p-6 ${className}`}
     >
       {children}
     </div>

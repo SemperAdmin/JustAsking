@@ -1,0 +1,111 @@
+/*
+ * JustAsking's own layer, on top of the Semper Admin token set.
+ *
+ * semper-tokens.css is a byte-for-byte mirror of the v1.2 file in
+ * SemperAdminPortal and is treated as read-only -- when a brand token changes
+ * it changes there and is re-mirrored. Everything specific to this app lives
+ * here instead, and is expressed in terms of the brand tokens rather than in
+ * new hex values.
+ */
+
+/* The token set switches themes with a `.dark` class rather than the media
+ * query Tailwind assumes, so point the `dark:` variant at the class. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Role accents.
+ *
+ * The style guide pairs each audience with a colour -- "four roles, four
+ * colours, match the accent to the audience". A card carries the role it was
+ * addressed to in its URL, and that role re-points the primary token. Every
+ * component just reads `--color-primary`, so none of them know roles exist.
+ */
+[data-role='marine'] {
+  --color-primary: var(--color-usmc-scarlet);
+  --color-primary-foreground: #fffcf4;
+  --color-ring: var(--color-usmc-scarlet);
+}
+.dark [data-role='marine'] {
+  --color-primary: var(--color-usmc-scarlet-300);
+  --color-primary-foreground: var(--color-ink-900);
+}
+
+[data-role='leader'] {
+  --color-primary: var(--color-brass);
+  --color-primary-foreground: #1a1610;
+  --color-ring: var(--color-brass);
+}
+.dark [data-role='leader'] {
+  --color-primary: var(--color-brass-300);
+  --color-primary-foreground: var(--color-ink-900);
+}
+
+[data-role='commander'] {
+  --color-primary: var(--color-marine-blue);
+  --color-primary-foreground: var(--color-parchment);
+  --color-ring: var(--color-marine-blue);
+}
+.dark [data-role='commander'] {
+  --color-primary: var(--color-marine-blue-100);
+  --color-primary-foreground: var(--color-ink-900);
+}
+
+[data-role='admin'] {
+  --color-primary: var(--color-role-admin);
+  --color-primary-foreground: #fffcf4;
+  --color-ring: var(--color-role-admin);
+}
+.dark [data-role='admin'] {
+  /* The guide names no light variant for the admin green, so derive one from
+   * the token rather than introduce a sixth hex the style guide does not own. */
+  --color-primary: color-mix(in srgb, var(--color-role-admin) 74%, white);
+  --color-primary-foreground: var(--color-ink-900);
+}
+
+/* Tint the gradient accent with the active role instead of always running
+ * scarlet-to-brass, so the hero keyword matches the card's audience. */
+.gradient-accent {
+  background: linear-gradient(
+    95deg,
+    var(--color-primary) 0%,
+    color-mix(in srgb, var(--color-primary) 60%, var(--color-brass-300)) 45%,
+    var(--color-brass) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.ambient-bloom::before {
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in srgb, var(--color-primary) 12%, transparent) 0%,
+    color-mix(in srgb, var(--color-marine-blue-300) 8%, transparent) 40%,
+    transparent 75%
+  );
+}
+
+/* Eyebrow: the guide's small-caps label, used above every card heading. */
+.eyebrow {
+  font:
+    700 11px/1 var(--font-body);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-muted-foreground);
+}
+
+/* Bebas Neue renders tight by default; the guide asks for wide tracking on
+ * the wordmark specifically. */
+.wordmark {
+  font-family: var(--font-display);
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+
+/* The scarlet rule the portal footer puts above its content. */
+.brand-rule {
+  height: 2px;
+  width: 5rem;
+  background: var(--color-usmc-scarlet);
+}

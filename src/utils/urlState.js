@@ -1,6 +1,13 @@
 import LZString from 'lz-string'
 
-import { MAX_ANSWER_LENGTH, MAX_OPTIONS, MAX_OPTION_LENGTH, MAX_QUESTION_LENGTH, THEME_IDS } from '../constants.js'
+import {
+  DEFAULT_ROLE,
+  MAX_ANSWER_LENGTH,
+  MAX_OPTIONS,
+  MAX_OPTION_LENGTH,
+  MAX_QUESTION_LENGTH,
+  ROLE_IDS,
+} from '../constants.js'
 
 /**
  * The card payload is intentionally single-letter keyed. Every byte here becomes
@@ -8,14 +15,14 @@ import { MAX_ANSWER_LENGTH, MAX_OPTIONS, MAX_OPTION_LENGTH, MAX_QUESTION_LENGTH,
  * app is that the card fits in a link somebody can paste into a text message.
  *
  *   q -> question prompt      (string)
- *   t -> theme id             (string)
+ *   t -> role accent id       (string)
  *   o -> response options     (string[])
  *   a -> selected answer      (string, empty until the recipient picks)
  */
 
 export const EMPTY_STATE = {
   q: '',
-  t: THEME_IDS[0],
+  t: DEFAULT_ROLE,
   o: ['Yes', 'No'],
   a: '',
 }
@@ -60,14 +67,16 @@ export function sanitizeState(raw) {
   // A card without a question or without anything to click is not answerable.
   if (!question || options.length === 0) return null
 
-  const theme = THEME_IDS.includes(raw.t) ? raw.t : EMPTY_STATE.t
+  // An unrecognised accent falls back rather than failing the card. Links
+  // minted before the role accents replaced the old theme names land here.
+  const role = ROLE_IDS.includes(raw.t) ? raw.t : DEFAULT_ROLE
 
   // The answer only counts if it is one of the options actually offered. This
   // stops a tampered link from displaying a reply the recipient never gave.
   const claimedAnswer = toSafeString(raw.a, MAX_ANSWER_LENGTH)
   const answer = options.includes(claimedAnswer) ? claimedAnswer : ''
 
-  return { q: question, t: theme, o: options, a: answer }
+  return { q: question, t: role, o: options, a: answer }
 }
 
 /**

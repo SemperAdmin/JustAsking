@@ -24,7 +24,7 @@ export default function ShareLink({ url, label, hint }) {
 
   return (
     <div className="space-y-2">
-      {label ? <label className="block text-sm font-medium text-ink">{label}</label> : null}
+      {label ? <label className="eyebrow block">{label}</label> : null}
 
       <div className="flex flex-col gap-2 sm:flex-row">
         <input
@@ -34,12 +34,12 @@ export default function ShareLink({ url, label, hint }) {
           value={url}
           onFocus={(event) => event.target.select()}
           aria-label={label || 'Shareable link'}
-          className="w-full min-w-0 rounded-lg border border-edge bg-page px-3 py-2 font-mono text-xs text-ink"
+          className="w-full min-w-0 rounded-button border border-input bg-bg-sunken px-3 py-2 font-mono text-xs text-foreground"
         />
         <button
           type="button"
           onClick={handleCopy}
-          className="shrink-0 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-contrast transition-colors hover:bg-accent-hover"
+          className="shrink-0 rounded-button bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
         >
           {status === 'copied' ? 'Copied' : status === 'error' ? 'Copy failed' : 'Copy link'}
         </button>
@@ -51,15 +51,15 @@ export default function ShareLink({ url, label, hint }) {
       </p>
 
       {status === 'error' ? (
-        <p className="text-xs text-muted">
+        <p className="text-xs text-muted-foreground">
           Your browser blocked the clipboard. The link is selected above &mdash; copy it manually.
         </p>
       ) : null}
 
-      {hint ? <p className="text-xs text-muted">{hint}</p> : null}
+      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
 
       {tooLong ? (
-        <p className="text-xs text-muted">
+        <p className="text-xs text-muted-foreground">
           This link is {url.length} characters. Some chat apps break links that long &mdash; shortening
           your question or trimming an option will help.
         </p>

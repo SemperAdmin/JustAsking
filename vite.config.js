@@ -2,7 +2,18 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
+import pkg from './package.json' with { type: 'json' }
+
+// Build stamp for the footer. Read at config time so the value is fixed when
+// the artifact is produced, not when the page is opened.
+const BUILD_DATE = new Date().toISOString().slice(0, 10)
+
 export default defineConfig({
+  define: {
+    __BUILD_DATE__: JSON.stringify(BUILD_DATE),
+    __APP_VERSION__: JSON.stringify(`v${pkg.version}`),
+  },
+
   // Relative base so the built app works from any static host or subpath,
   // including a GitHub Pages project page served from /JustAsking/.
   base: './',

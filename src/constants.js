@@ -13,36 +13,37 @@ export const MAX_OPTIONS = 6
 export const URL_LENGTH_WARN_AT = 1800
 
 /**
- * Themes are pure presentation. Each id maps to a `data-theme` value that
- * src/themes.css resolves into CSS custom properties, so a card can never
- * inject styling of its own -- it can only pick from this list.
+ * Role accents, from the Semper Admin style guide: four roles, four colours,
+ * matched to the audience being addressed.
+ *
+ * A card's `t` value is one of these ids. It selects a `data-role` attribute
+ * that re-points `--color-primary` in justasking.css, so a card can pick an
+ * accent from this list but can never supply styling of its own.
  */
-export const THEMES = [
+export const ROLES = [
   {
-    id: 'default',
-    label: 'Default',
-    description: 'Clean and friendly',
+    id: 'marine',
+    label: 'Marine',
+    audience: 'Junior enlisted',
   },
   {
-    id: 'romantic',
-    label: 'Romantic',
-    description: 'Soft pinks, for the nervous ask',
+    id: 'leader',
+    label: 'Leader',
+    audience: 'NCO and SNCO',
   },
   {
-    id: 'professional',
-    label: 'Professional',
-    description: 'Understated, for work',
+    id: 'commander',
+    label: 'Commander',
+    audience: 'Officer',
   },
   {
-    id: 'playful',
-    label: 'Playful',
-    description: 'Bright and loud',
-  },
-  {
-    id: 'midnight',
-    label: 'Midnight',
-    description: 'Dark and quiet',
+    id: 'admin',
+    label: 'Admin',
+    audience: 'S-1 and admin',
   },
 ]
 
-export const THEME_IDS = THEMES.map((theme) => theme.id)
+export const ROLE_IDS = ROLES.map((role) => role.id)
+
+/** Scarlet is the brand primary, so the Marine accent is the default. */
+export const DEFAULT_ROLE = ROLES[0].id

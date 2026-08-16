@@ -3,8 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>JustAsking</title>
+    <title>JustAsking &middot; Semper Admin</title>
     <meta name="description" content="Create a question, send the link, get an answer back. No accounts, no server." />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <!-- Dark navy is the brand default, so declare it before first paint to
+         avoid a light flash while the bundle loads. -->
+    <meta name="theme-color" content="#0A1424" />
+    <script>
+      try {
+        if (localStorage.getItem('justasking:scheme') !== 'light') {
+          document.documentElement.classList.add('dark')
+        }
+      } catch (e) {
+        document.documentElement.classList.add('dark')
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
