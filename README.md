@@ -148,6 +148,81 @@ looks healthy while the published site is wrong. If a deploy ever appears to
 succeed but the live page is blank, check this setting first — a
 `pages build and deployment` run in the Actions tab means it has reverted.
 
+## Deploying to cloud.gov
+
+A second target alongside GitHub Pages. Cloud Foundry, staticfile buildpack,
+nginx underneath.
+
+```powershell
+npm ci
+npm run predeploy          # build, test, and verify in one step
+cf login -a api.fr.cloud.gov --sso
+cf target -o YOUR_ORG -s YOUR_SPACE
+cf push
+```
+
+PowerShell 5.1 rejects `&&` as a separator, so run each line on its own. There
+is no `DEPLOY_TARGET` variable: `vite.config.js` already sets `base: './'`, so
+one build artifact works on GitHub Pages, on cloud.gov, and off the filesystem
+with no switch. `cf target` with no arguments only prints the current target and
+sets nothing.
+
+### What gets pushed
+
+`manifest.yml` pushes the repo root, not `dist/`, because the `Staticfile` and
+the nginx include have to travel with the site. `.cfignore` drops everything
+else, leaving 25 files: the built site plus those two config files. Its patterns
+are anchored with a leading slash, since `.cfignore` follows gitignore matching
+and a bare `index.html` would otherwise drop `dist/index.html` and publish a
+site whose entry point is a 404.
+
+The build never runs on the platform. The staticfile buildpack has no Node
+toolchain, and cloud.gov's own guidance is to build in CI. Nothing on the
+platform notices a missing or stale `dist/` either: the buildpack would stage
+cleanly and serve 404 for every request. `npm run verify:deploy` is the guard
+and it covers three failure modes that otherwise stay silent.
+
+- `dist/` absent, or holding the source entry point rather than a build output.
+- `dist/` older than `src/`, `index.html`, `vite.config.js`, or `package.json`.
+  A stale build pushes fine and looks live, which is the worst of the three.
+- An inline script in `index.html` edited without updating its CSP hash. The
+  browser blocks the script at runtime and the build stays green.
+
+### Response headers
+
+`nginx/conf/includes/security_headers.conf`, pulled in by `location_include`.
+
+The policy starts at `default-src 'none'` and that is a description rather than
+an aspiration: fonts, styles, script, and the emblem are all bundled and served
+from this origin, and there is no analytics, no telemetry, and no API.
+`connect-src 'none'` states the product's central promise in a form a browser
+enforces.
+
+The two inline scripts in `index.html`, the pre-paint colour scheme read and the
+ES5 boot diagnostic, are pinned by SHA-256 hash rather than waved through with
+`'unsafe-inline'`.
+
+Two honest weaknesses:
+
+- `style-src` carries `'unsafe-inline'`. React writes the per-option animation
+  delays in `CardViewer` as inline style attributes, and CSP treats a style
+  attribute as inline style. Moving those delays into a stylesheet removes the
+  need.
+- No per-path cache rule. Expressing one here needs a nested `location`, and
+  nginx does not inherit `add_header` into a child declaring its own, so every
+  security header would vanish from exactly the responses carrying the
+  application code. Asset caching belongs in front of the app.
+
+`build.assetsInlineLimit` is 0 in `vite.config.js` for this policy's sake. The
+default inlines assets under 4 kB as data: URIs, which pulled one brand woff2
+face into the stylesheet and forced `font-src` to accept `data:`. Emitting every
+asset as a file costs one extra HTTP/2 request and buys a policy with no data:
+source in it.
+
+Verified in Chromium against the real nginx config: the full round trip runs
+with zero CSP violations, all 15 font faces load, and inline style attributes
+still apply.
+
 ## Project layout
 
 ```

@@ -1,0 +1,35 @@
+# What cf push must NOT upload.
+#
+# Note the inversion against .gitignore: dist/ is ignored by git and is the one
+# directory the platform actually needs, while node_modules and src are tracked
+# concerns with no business on a static host.
+#
+# cf reads this file only. It does not fall back to .gitignore.
+#
+# Every source-tree entry below is anchored with a leading slash on purpose.
+# .cfignore follows gitignore matching, where an unanchored `index.html` matches
+# at any depth -- which would drop dist/index.html and publish a site whose
+# entry point is a 404. Anchoring confines each pattern to the repo root.
+
+/node_modules
+/src
+/public
+/scripts
+/index.html
+/vite.config.js
+/package.json
+/package-lock.json
+/manifest.yml
+
+/.git
+/.github
+/.gitignore
+
+/*.md
+/*.patch
+/*.diff
+
+.DS_Store
+.vscode
+.idea
+npm-debug.log*
