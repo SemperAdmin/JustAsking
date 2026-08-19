@@ -28,12 +28,27 @@ export default function App() {
   const [card, setCard] = useState(() => decodeState(window.location.hash))
   const [linkWasBroken, setLinkWasBroken] = useState(() => hasHash() && !decodeState(window.location.hash))
 
+  // Identity of the card currently in the address bar.
+  //
+  // This is the <CardViewer/> key, and it is load-bearing rather than cosmetic.
+  // Without it React reuses the mounted viewer across a hash change, because the
+  // element keeps its type and position. The viewer seeds its answers and its
+  // step from the card once, at mount, so the reused instance renders the new
+  // card's questions carrying the previous card's answers -- and then offers to
+  // send those answers back to a different person. A free-text answer survives
+  // the recipient sanitizer intact, so the leak reaches the second sender.
+  //
+  // Keying on the fragment remounts the viewer, which resets the answers, the
+  // step, and the delivery phase together.
+  const [cardKey, setCardKey] = useState(() => window.location.hash)
+
   // Keep the view in step with the address bar: the back button after a reset,
   // or someone pasting a different card into the same tab.
   useEffect(() => {
     function syncFromHash() {
       const next = decodeState(window.location.hash)
       setCard(next)
+      setCardKey(window.location.hash)
       setLinkWasBroken(hasHash() && !next)
     }
 
@@ -46,6 +61,7 @@ export default function App() {
     // `location.hash = ''` it does not leave a bare '#' behind.
     window.history.replaceState(null, '', window.location.pathname + window.location.search)
     setCard(null)
+    setCardKey('')
     setLinkWasBroken(false)
   }, [])
 
@@ -64,7 +80,7 @@ export default function App() {
       ) : isComplete(card) ? (
         <CardResult card={card} onReset={handleReset} />
       ) : (
-        <CardViewer card={card} />
+        <CardViewer key={cardKey} card={card} />
       )}
     </Layout>
   )

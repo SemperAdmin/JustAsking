@@ -21,7 +21,24 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The gate. Publishing is blocked on a green suite, so a regression in the
+  # payload logic or the viewer's state handling stops here rather than shipping.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm test
+
   build:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

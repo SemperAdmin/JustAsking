@@ -84,17 +84,50 @@ punish normal senders for a case they never hit. Measured:
 | Realistic 5 questions, ordinary English | 655 |
 | 5 questions, maximum fields, incompressible text | 3376 — **refused** |
 
+Choice, date, and date-time answers are drawn from content already sitting in
+the payload, so their projection is exact. A free-text answer does not exist
+yet at projection time, and its filler necessarily shares an alphabet across
+questions in a way genuinely unrelated answers would not, so a card carrying
+any free-text question is projected with a 12% margin on top. `npm test`
+asserts the invariant directly against randomised content: a card the creator
+accepts always produces a reply inside the ceiling.
+
 ## Getting started
 
 ```bash
 npm install
-npm run dev      # dev server
-npm run build    # production build into dist/
-npm run preview  # serve the production build
+npm run dev        # dev server
+npm run build      # production build into dist/
+npm run preview    # serve the production build
+npm test           # run the suite once
+npm run test:watch # re-run on change
 ```
+
+`npm test` gates deployment. The workflow will not publish a build whose suite
+is red.
 
 The build uses relative asset paths, so `dist/` can be dropped on any static
 host — or opened straight from the filesystem.
+
+## Testing
+
+Vitest with jsdom. Two files, covering the two places where a mistake is not
+merely cosmetic.
+
+`src/utils/urlState.test.js` covers the sanitizer, the decoder, and the URL
+budget. This file holds the whole trust boundary of the app, so the tests are
+adversarial: junk payloads, a choice answer that was never on the option list, a
+date that passes the shape check but is not a real day, a truncated fragment,
+and a legacy payload shape. The budget tests are randomised rather than fixed,
+because a fixed fixture would have passed against the bug they now guard.
+
+`src/App.test.jsx` drives the real round trip through a DOM and asserts that
+pasting a second card into an open tab carries nothing across from the first.
+That is a regression guard for a confirmed leak, not a hypothetical: the viewer
+seeds its answers once at mount, so before the fragment became its key React
+reused the mounted instance and offered to send one sender's private free-text
+answer back to a different one. `<CardViewer key={cardKey}/>` in `App.jsx` is
+load-bearing, and removing it turns this test red.
 
 ## Deployment
 
@@ -120,6 +153,7 @@ succeed but the live page is blank, check this setting first — a
 ```
 src/
 ├── App.jsx                    # reads the hash, picks the view
+├── App.test.jsx               # end-to-end guard: no state crosses cards
 ├── constants.js               # limits, question kinds, delivery styles
 ├── index.css                  # imports tailwind, brand tokens, app layer
 ├── assets/
@@ -146,7 +180,8 @@ src/
 │   └── useCopyToClipboard.js  # clipboard write with an execCommand fallback
 └── utils/
     ├── formatAnswer.js        # renders stored answers, dates to locale
-    └── urlState.js            # encode / decode / sanitize the payload
+    ├── urlState.js            # encode / decode / sanitize the payload
+    └── urlState.test.js       # sanitizer, decoder, and URL budget invariants
 ```
 
 ## Branding

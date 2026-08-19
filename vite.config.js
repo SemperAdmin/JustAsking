@@ -28,4 +28,19 @@ export default defineConfig({
   },
 
   plugins: [react(), tailwindcss()],
+
+  // Vitest transforms JSX with esbuild rather than through the React plugin, and
+  // esbuild's default is the classic runtime, which expects React in scope.
+  // Every component here relies on the automatic runtime.
+  esbuild: {
+    jsx: 'automatic',
+  },
+
+  test: {
+    // The payload logic reads window.location and the component tests drive a
+    // real DOM, so both need a browser-shaped environment.
+    environment: 'jsdom',
+    globals: true,
+    include: ['src/**/*.test.{js,jsx}'],
+  },
 })

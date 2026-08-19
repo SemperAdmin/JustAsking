@@ -160,17 +160,37 @@ export function isComplete(card) {
  * High-entropy filler, used only to size the worst case a free-text answer
  * could reach. A repeated character would compress to nothing and make the
  * projection below far too optimistic.
+ *
+ * `seed` has to differ per question. The generator is deterministic, so calling
+ * it with one seed for every free-text answer on a card produced the *same*
+ * string five times over, and LZ-String collapses a repeat to a back-reference
+ * costing a couple of characters. That made a five-question card project at
+ * roughly a single question's worth of answer, and the creator would mint a
+ * card whose real reply overran the ceiling it had promised to respect.
  */
-function incompressible(length) {
+function incompressible(length, seed = 1) {
   const alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,'
-  let seed = 1
+  // A seed of 0 is a fixed point of the recurrence and would emit one repeated
+  // character, so keep it away from zero.
+  let state = (seed | 0) === 0 ? 1 : seed | 0
   let out = ''
   for (let i = 0; i < length; i++) {
-    seed = (seed * 1103515245 + 12345) & 0x7fffffff
-    out += alphabet[seed % alphabet.length]
+    state = (state * 1103515245 + 12345) & 0x7fffffff
+    out += alphabet[state % alphabet.length]
   }
   return out
 }
+
+/**
+ * Headroom on the projection, as a fraction.
+ *
+ * Even with a distinct seed per answer, the filler shares an alphabet across
+ * questions, so LZ-String still finds a little structure between them that
+ * genuinely unrelated answers would not offer. The projection therefore runs
+ * slightly under the true worst case. This margin covers the gap rather than
+ * pretending the estimate is exact.
+ */
+const PROJECTION_MARGIN = 0.12
 
 /**
  * How long this card's link could get once every question is answered.
@@ -184,7 +204,7 @@ function incompressible(length) {
 export function projectedAnsweredLength(card) {
   const filled = {
     ...card,
-    q: card.q.map((question) => {
+    q: card.q.map((question, index) => {
       if (question.k === 'c') {
         // The longest option is the worst this answer can actually be.
         const longest = question.o.reduce((a, b) => (b.length > a.length ? b : a), '')
@@ -192,10 +212,17 @@ export function projectedAnsweredLength(card) {
       }
       if (question.k === 'd') return { ...question, a: '2026-12-31' }
       if (question.k === 'dt') return { ...question, a: '2026-12-31T23:59' }
-      return { ...question, a: incompressible(MAX_TEXT_ANSWER_LENGTH) }
+      // Distinct filler per question. See the note on `incompressible`.
+      return { ...question, a: incompressible(MAX_TEXT_ANSWER_LENGTH, index + 1) }
     }),
   }
-  return encodeState(filled).length
+
+  // Only free-text answers are estimated. Choice, date, and date-time answers
+  // are drawn from content already in the payload, so their projection is exact
+  // and needs no padding.
+  const estimated = card.q.some((question) => question.k !== 'c' && question.k !== 'd' && question.k !== 'dt')
+  const length = encodeState(filled).length
+  return estimated ? Math.ceil(length * (1 + PROJECTION_MARGIN)) : length
 }
 
 /**
