@@ -1,0 +1,3 @@
+# Inline-script CSP hashes are computed over the exact bytes of index.html.
+# A CRLF checkout changes those bytes and the browser then blocks the scripts.
+* text=auto eol=lf
