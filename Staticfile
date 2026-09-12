@@ -1,0 +1,24 @@
+# Cloud Foundry / cloud.gov static hosting.
+#
+# The pushed artifact is the whole repo minus what .cfignore drops, so the site
+# itself sits one level down in dist/. An alternate root is also what makes
+# location_include usable: the buildpack requires one before it will pull in a
+# custom nginx block.
+root: dist
+
+# Response headers live here. See nginx/conf/includes/security_headers.conf.
+location_include: includes/*.conf
+
+# Redirect plain HTTP, and tell browsers never to try it again. cloud.gov
+# terminates TLS at the router and forwards X-Forwarded-Proto, which the
+# buildpack reads.
+force_https: true
+http_strict_transport_security: true
+
+# Hidden files stay unserved. Nothing in dist/ starts with a dot, and the
+# default is the safer posture.
+host_dot_files: false
+
+# NOT enabled on purpose: pushstate. Every piece of card state in this app lives
+# in the URL fragment, which no server ever receives. There are no client routes
+# to rewrite, so turning it on would only convert a genuine 404 into a 200.

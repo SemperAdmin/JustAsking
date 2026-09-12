@@ -25,3 +25,8 @@ jobs:
       - run: npm test
 
       - run: npm run build
+
+      # Catches a CSP hash drifting away from an edited inline script in
+      # index.html. The browser would block the script at runtime and the build
+      # itself would stay green, so this has to be its own step.
+      - run: npm run verify:deploy
