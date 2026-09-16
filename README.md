@@ -407,10 +407,15 @@ conventions for the same asset — pick one canonical host."*
 
 Both controls render nothing until `WALKTHROUGH.url` is set in
 `src/lib/app-links.js`, so a half-configured build shows no feature rather than
-a dead link. To switch it on: set `url`, drop a 16:9 still at
-`public/walkthrough-poster.jpg`, and set `hasPoster` to true. Without a still it
-falls back to a branded panel built from the emblem already in the bundle, so
-the walkthrough can go live before the artwork does. The walkthrough is on the
+a dead link. The poster is optional and separate: drop a 16:9 still at
+`public/walkthrough-poster.jpg` and set `hasPoster` to true. Until then a plain
+panel sits behind the play badge, so the walkthrough goes live without waiting
+on artwork. The poster must stay local — the deployed CSP is `img-src 'self'`,
+which would block a thumbnail pulled from the video host.
+
+The walkthrough is on `portal.mcele.usmc.mil`, so a reader on a personal device
+or off-network may not be able to reach it. That is a property of the host, not
+of this app — the same caveat as the feedback form. The walkthrough is on the
 creator only — the recipient has one job, and a tutorial is not it.
 
 **Make your own card**, on the recipient's review step, points at the app with

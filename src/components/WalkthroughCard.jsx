@@ -7,10 +7,15 @@ import {
 
 /**
  * The poster half of the row: the sender's still if one has been supplied,
- * otherwise a branded panel built from the emblem already in the bundle.
+ * otherwise a plain panel.
  *
- * The fallback exists so the walkthrough can go live the moment there is a URL,
- * without waiting on artwork, and so a missing file never shows a broken image.
+ * The fallback carries no mark of its own. The emblem was tried there and the
+ * play badge sits centred on top of it, so the two collided into something that
+ * read as clutter rather than as a thumbnail. An empty panel behind the badge
+ * reads as "video, no still yet", which is exactly what it is.
+ *
+ * It exists so the walkthrough can go live the moment there is a URL, without
+ * waiting on artwork, and so a missing file never shows a broken image.
  */
 function Poster() {
   if (WALKTHROUGH.hasPoster) {
@@ -24,11 +29,7 @@ function Poster() {
       />
     );
   }
-  return (
-    <div className="grid size-full place-items-center bg-bg-sunken">
-      <img src={emblem} alt="" className="size-8 object-contain opacity-70" />
-    </div>
-  );
+  return <div className="size-full bg-surface-2" />;
 }
 
 /**

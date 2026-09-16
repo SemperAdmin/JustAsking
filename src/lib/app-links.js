@@ -54,7 +54,7 @@ export function blankCardHref() {
  * dead link.
  */
 export const WALKTHROUGH = {
-  url: '',
+  url: 'https://portal.mcele.usmc.mil/content/mcele-portal/en/media/detail.html?Id=98193AA0FE0D',
   hasPoster: false,
   posterFile: 'walkthrough-poster.jpg',
   /** Shown to set expectations before a tap. Omitted from the copy if empty. */
