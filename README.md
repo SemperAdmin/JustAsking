@@ -286,6 +286,23 @@ URL. Prefilling any of that would hand somebody's card to a third party, which
 is the one promise this app makes. A test asserts the app issues **no** requests
 off-origin.
 
+**Watch the walkthrough** appears on the creator, and **How it works** in the
+footer. Both are a poster and a link, never an embed. An iframe would contact a
+third party on page load — before anyone asked for a video — on a page whose
+footer promises nothing is stored; a poster costs no network at all until the
+tap. The video itself is not in this repo: it lives on one canonical host, and
+the app holds only a link and a local still. That follows the convention the
+portal settled on after its 2026-08 video audit, whose finding was *"three
+conventions for the same asset — pick one canonical host."*
+
+Both controls render nothing until `WALKTHROUGH.url` is set in
+`src/lib/app-links.js`, so a half-configured build shows no feature rather than
+a dead link. To switch it on: set `url`, drop a 16:9 still at
+`public/walkthrough-poster.jpg`, and set `hasPoster` to true. Without a still it
+falls back to a branded panel built from the emblem already in the bundle, so
+the walkthrough can go live before the artwork does. The walkthrough is on the
+creator only — the recipient has one job, and a tutorial is not it.
+
 **Make your own card**, on the recipient's review step, points at the app with
 no fragment. The recipient is the person most likely not to know this app yet,
 so that is where the invitation belongs. It opens in a new tab on purpose: their

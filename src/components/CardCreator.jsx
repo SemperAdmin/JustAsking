@@ -11,6 +11,7 @@ import { createEmptyQuestion, encodeState, projectedAnsweredLength } from '../ut
 import { Card } from './Layout'
 import DeliveryPreview from './DeliveryPreview'
 import QuestionEditor from './QuestionEditor'
+import WalkthroughCard from './WalkthroughCard'
 import ShareLink from './ShareLink'
 
 /**
@@ -102,6 +103,9 @@ export default function CardCreator() {
         Build the questions, choose how the card arrives, and send the link. No accounts and no
         server &mdash; the whole card travels inside the URL.
       </p>
+
+      {/* Renders nothing until a walkthrough URL is configured. */}
+      <WalkthroughCard />
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-6">
         <fieldset>
