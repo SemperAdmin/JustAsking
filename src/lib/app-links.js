@@ -14,6 +14,13 @@
 export const FEEDBACK_URL = 'https://forms.osi.apps.mil/r/k5QWzJDL9P'
 
 /**
+ * Where the header emblem points: the Semper Admin portal. Opens in a new tab
+ * so the open card is not lost. Same rule as the feedback link -- nothing from
+ * the card travels with it.
+ */
+export const PORTAL_URL = 'https://semper-admin-portal.app.cloud.gov/'
+
+/**
  * This app, with no card in the fragment.
  *
  * Computed rather than hardcoded so it stays correct wherever the build is

@@ -1,0 +1,43 @@
+---
+# cloud.gov / Cloud Foundry application manifest.
+#
+# Deploy with a built dist/ present:
+#
+#   npm ci
+#   npm run build
+#   npm run verify:csp
+#   cf push
+#
+# The build runs on your machine or in CI, never on the platform. The staticfile
+# buildpack has no Node toolchain, and cloud.gov's own guidance is to build in CI
+# rather than during the deploy.
+applications:
+  - name: justasking
+
+    buildpacks:
+      - staticfile_buildpack
+
+    # nginx serving a 300 kB directory of static files. 64M is roomy for that,
+    # and the free sandbox caps the whole space at 1 GB, so restraint here is
+    # what leaves room for anything else in the space.
+    memory: 64M
+    disk_quota: 256M
+
+    # Two, not one. A single instance means a platform runner issue takes the
+    # site down, and cloud.gov's production guidance calls this out directly.
+    # Drop to 1 in a sandbox space if the quota is tight.
+    instances: 2
+
+    stack: cflinuxfs4
+
+    # The default port check is enough for a static server: nginx accepting a
+    # connection is the whole of its readiness.
+    health-check-type: port
+
+    # Push the repo, not just dist/. The Staticfile and the nginx include have to
+    # travel with it, and .cfignore drops everything else.
+    #
+    # Nothing on the platform notices a missing or stale dist/. The buildpack
+    # would stage cleanly and serve 404 for every request. `npm run predeploy`
+    # is the guard, and it runs before cf push, not after.
+    path: .
