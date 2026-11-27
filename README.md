@@ -1,474 +1,80 @@
 # JustAsking
 
-A Semper Admin app. Ask someone a question, send them a link, get their answer
-back. No accounts, no database, no backend — the entire card is encoded into the
-URL fragment.
+Lets you ask someone a short set of questions by sending them a link, and read their answers when the link comes back. Built for quick, informal polls among Marines.
 
-## How it works
+**Live:** https://justasking.app.cloud.gov
+**Also at:** https://semperadmin.github.io/JustAsking/
 
-The app has no router. Which view you see is decided entirely by what is in
-`window.location.hash`:
+## What it does
 
-| Hash                          | View            | Who is looking               |
-| ----------------------------- | --------------- | ---------------------------- |
-| _(none)_                      | `<CardCreator/>`| The sender, building a card  |
-| present, a question unanswered| `<CardViewer/>` | The recipient, answering     |
-| present, all answered         | `<CardResult/>` | The sender, seeing the replies |
+- Builds a card of one to five questions: choice, free text, date, or date and time.
+- Lets the sender pick how the card arrives (sealed dispatch, stamped orders, field transmission or unrolled orders) and previews it.
+- Shows the recipient one question at a time, with a review step before they send back a reply link.
+- Shows the sender the replies when the reply link is opened.
+- Needs no account, database or server: the whole card is encoded in the link.
 
-The round trip is: sender generates a link → recipient opens it, plays out
-whichever delivery the sender chose, and answers the questions **one at a time** → recipient copies the *new*
-link the app generates → sender opens that and sees the answers.
+## Using it
 
-Questions are presented singly rather than as a form. A card is a conversation,
-not paperwork, and a stack of prompts reads as the latter. A choice advances
-itself on tap — the tap *is* the answer; text and dates get an explicit Next,
-having no natural completion. A review step at the end lists every answer with a
-Change beside it. Nothing is transmitted to any server at any point; a URL
-fragment is never sent in an HTTP request.
+Open the live site in a current browser. No account or CAC is needed. Write your questions, choose a delivery style and copy the link. The recipient opens the link, answers, and sends back the new link the app gives them. Opening that link shows you the answers.
 
-### Payload
+Anyone who holds a link can read the questions and answers in it. Do not put names, EDIPIs, medical or legal matters, or anything that needs a formal record into a card. See [docs/DESIGN.md](docs/DESIGN.md).
 
-Keys are single letters to keep the encoded link short:
+## Privacy and security
 
-```json
-{
-  "t": "env",
-  "q": [
-    { "p": "Will you attend the meeting?", "k": "c", "o": ["Yes", "No"], "a": "" },
-    { "p": "When are you available?", "k": "dt", "a": "" }
-  ]
-}
-```
+- Nothing you enter is sent to a server. The card lives in the part of the link after the `#`, which browsers never send in a request. The app makes no network requests of its own; its Content Security Policy sets `connect-src 'none'` and the default source to `'none'`.
+- Three links in the page lead off the site and open only when you select them, in a new tab, with nothing from your card attached: **Send feedback** (an external form that needs a .mil network), **How it works** (a walkthrough video on a .mil portal, also needs a .mil network), and the emblem in the header (the Semper Admin Portal).
+- The browser stores only two preferences in `localStorage`: your light or dark colour scheme and your choice to play or skip the card-opening animation. No cookies, analytics or fonts from other sites.
+- The delivery animation plays even when a device asks for reduced motion; a reader whose device asks for less motion is offered a one-tap way to turn it off. See [docs/BRAND-AND-MOTION.md](docs/BRAND-AND-MOTION.md).
+- The hosting platforms (cloud.gov and GitHub Pages) keep standard web server access logs, such as IP address, time, requested page and browser type, for operations and security. Semper Admin does not add tracking of its own.
 
-- `t` — delivery style, one of `env`, `stamp`, `wire`, `scroll`
-- `q` — 1 to 5 questions, each with:
-  - `p` — the prompt (max 160 characters)
-  - `k` — kind: `c` choice, `x` free text, `d` date, `dt` date and time
-  - `o` — choice only: up to 6 options (max 40 characters each)
-  - `a` — the answer; empty until the recipient answers
+See [Security](SECURITY.md).
 
-Every question must be answered before the recipient gets a reply link, and it
-is that completeness — not any single field — that routes the sender to the
-result.
+## Development
 
-Answers are validated by kind, not merely by length. A choice answer must be one
-of the options the card actually offered; a date must be a real calendar date,
-so `2026-02-31` is discarded rather than displayed.
-
-That JSON is `JSON.stringify`'d, compressed with
-`LZString.compressToEncodedURIComponent`, and written to the hash.
-
-### Backward compatibility
-
-`q` used to be a single string with `o` and `a` beside it. `t` has meant three
-different things: a free-form theme name, then a role accent, now a delivery
-style. Links minted under any of those still open — the old payload is lifted
-into a one-question card, and an unrecognized `t` falls back to `env`.
-
-### The URL budget
-
-A card that can be sent must be able to come back — the recipient's reply is a
-*longer* link than the one they received. So the creator measures the card's
-**fully answered** form before minting anything, and refuses outright if that
-would exceed 1900 characters.
-
-The ceiling is enforced by measurement rather than by tightening the field
-limits, because encoded length depends on content, not just character count.
-Ordinary English compresses to roughly a third; an identifier or pasted token
-barely compresses at all. Sizing every limit for the incompressible case would
-punish normal senders for a case they never hit. Measured:
-
-| Card | Answered length |
-| --- | --- |
-| The two-question example above | 220 |
-| Realistic 5 questions, ordinary English | 655 |
-| 5 questions, maximum fields, incompressible text | 3376 — **refused** |
-
-Choice, date, and date-time answers are drawn from content already sitting in
-the payload, so their projection is exact. A free-text answer does not exist
-yet at projection time, and its filler necessarily shares an alphabet across
-questions in a way genuinely unrelated answers would not, so a card carrying
-any free-text question is projected with a 12% margin on top. `npm test`
-asserts the invariant directly against randomised content: a card the creator
-accepts always produces a reply inside the ceiling.
-
-## Getting started
+Requires Node.js 22 (the version the workflows use) and npm.
 
 ```bash
-npm install
-npm run dev        # dev server
-npm run build      # production build into dist/
-npm run preview    # serve the production build
-npm test           # run the suite once
-npm run test:watch # re-run on change
+npm ci
+npm run dev
+npm test
+npm run build
+npm run verify:deploy
 ```
 
-`npm test` gates deployment. The workflow will not publish a build whose suite
-is red.
+`npm run verify:deploy` checks, before a cloud.gov push, that `dist/` holds a real build, that it is newer than the sources, and that every inline script in the built page is pinned by hash in the Content Security Policy.
 
-The build uses relative asset paths, so `dist/` can be dropped on any static
-host — or opened straight from the filesystem.
-
-## Testing
-
-Vitest with jsdom. Two files, covering the two places where a mistake is not
-merely cosmetic.
-
-`src/utils/urlState.test.js` covers the sanitizer, the decoder, and the URL
-budget. This file holds the whole trust boundary of the app, so the tests are
-adversarial: junk payloads, a choice answer that was never on the option list, a
-date that passes the shape check but is not a real day, a truncated fragment,
-and a legacy payload shape. The budget tests are randomised rather than fixed,
-because a fixed fixture would have passed against the bug they now guard.
-
-`src/App.test.jsx` drives the real round trip through a DOM and asserts that
-pasting a second card into an open tab carries nothing across from the first.
-That is a regression guard for a confirmed leak, not a hypothetical: the viewer
-seeds its answers once at mount, so before the fragment became its key React
-reused the mounted instance and offered to send one sender's private free-text
-answer back to a different one. `<CardViewer key={cardKey}/>` in `App.jsx` is
-load-bearing, and removing it turns this test red.
+`npm run preview` serves the production build and `npm run test:watch` re-runs the tests on change. The build uses relative asset paths, so the same `dist/` works on GitHub Pages, cloud.gov or straight from the filesystem.
 
 ## Deployment
 
-Live at <https://semperadmin.github.io/JustAsking/>, published by
-`.github/workflows/deploy.yml` on every push to `main`.
+| Environment | URL | How |
+|---|---|---|
+| cloud.gov | https://justasking.app.cloud.gov | `manifest.yml` (staticfile buildpack); manual **Deploy to cloud.gov** workflow; sandbox managed by the private cloudgov-redeploy repository |
+| GitHub Pages | https://semperadmin.github.io/JustAsking/ | `.github/workflows/deploy.yml` on push to `main` |
 
-**Settings → Pages → Source must be set to "GitHub Actions."** This is not
-optional and is easy to get wrong, because the alternative setting looks like it
-should work. With "Deploy from a branch → main → /(root)", GitHub publishes the
-repository files verbatim, and the root `index.html` is Vite's entry point — it
-points at `/src/main.jsx`, which is JSX the browser cannot execute. The result
-is a blank page.
+GitHub Pages must be set to deploy from **GitHub Actions**, not from a branch. Details of what the cloud.gov push contains and the response headers are in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
-Worse, that setting is not merely wrong but actively competing: both builders
-run on each push, and GitHub's branch builder tends to finish last and overwrite
-the built site. The workflow reports success either way, so the Actions tab
-looks healthy while the published site is wrong. If a deploy ever appears to
-succeed but the live page is blank, check this setting first — a
-`pages build and deployment` run in the Actions tab means it has reverted.
+## Documentation
 
-## Deploying to cloud.gov
+- [docs/DESIGN.md](docs/DESIGN.md): how the card travels in the link, the link size limit, handling untrusted links, outbound links and caveats.
+- [docs/BRAND-AND-MOTION.md](docs/BRAND-AND-MOTION.md): branding, delivery styles and the motion exception.
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md): what gets pushed to cloud.gov and the response headers.
 
-A second target alongside GitHub Pages. Cloud Foundry, staticfile buildpack,
-nginx underneath.
+## Feedback and support
 
-```powershell
-npm ci
-npm run predeploy          # build, test, and verify in one step
-cf login -a api.fr.cloud.gov --sso
-cf target -o YOUR_ORG -s YOUR_SPACE
-cf push
-```
+[Open an issue](https://github.com/SemperAdmin/JustAsking/issues), or use **Send feedback** in the app from a .mil network. Report security problems as described in [SECURITY.md](SECURITY.md).
 
-PowerShell 5.1 rejects `&&` as a separator, so run each line on its own. There
-is no `DEPLOY_TARGET` variable: `vite.config.js` already sets `base: './'`, so
-one build artifact works on GitHub Pages, on cloud.gov, and off the filesystem
-with no switch. `cf target` with no arguments only prints the current target and
-sets nothing.
+## License and disclaimer
 
-### What gets pushed
+MIT (see [LICENSE](LICENSE)).
 
-`manifest.yml` pushes the repo root, not `dist/`, because the `Staticfile` and
-the nginx include have to travel with the site. `.cfignore` drops everything
-else, leaving 25 files: the built site plus those two config files. Its patterns
-are anchored with a leading slash, since `.cfignore` follows gitignore matching
-and a bare `index.html` would otherwise drop `dist/index.html` and publish a
-site whose entry point is a 404.
+> This is an independent tool built to help Marines with administrative
+> work. It is not an official Department of the Navy or U.S. Marine Corps
+> system and is not endorsed by, affiliated with, or approved by either.
+> Always confirm requirements against the current governing orders.
 
-The build never runs on the platform. The staticfile buildpack has no Node
-toolchain, and cloud.gov's own guidance is to build in CI. Nothing on the
-platform notices a missing or stale `dist/` either: the buildpack would stage
-cleanly and serve 404 for every request. `npm run verify:deploy` is the guard
-and it covers three failure modes that otherwise stay silent.
+## Part of Semper Admin
 
-- `dist/` absent, or holding the source entry point rather than a build output.
-- `dist/` older than `src/`, `index.html`, `vite.config.js`, or `package.json`.
-  A stale build pushes fine and looks live, which is the worst of the three.
-- An inline script in `index.html` edited without updating its CSP hash. The
-  browser blocks the script at runtime and the build stays green.
-
-### Response headers
-
-`nginx/conf/includes/security_headers.conf`, pulled in by `location_include`.
-
-The policy starts at `default-src 'none'` and that is a description rather than
-an aspiration: fonts, styles, script, and the emblem are all bundled and served
-from this origin, and there is no analytics, no telemetry, and no API.
-`connect-src 'none'` states the product's central promise in a form a browser
-enforces.
-
-The two inline scripts in `index.html`, the pre-paint colour scheme read and the
-ES5 boot diagnostic, are pinned by SHA-256 hash rather than waved through with
-`'unsafe-inline'`.
-
-Two honest weaknesses:
-
-- `style-src` carries `'unsafe-inline'`. React writes the per-option animation
-  delays in `CardViewer` as inline style attributes, and CSP treats a style
-  attribute as inline style. Moving those delays into a stylesheet removes the
-  need.
-- No per-path cache rule. Expressing one here needs a nested `location`, and
-  nginx does not inherit `add_header` into a child declaring its own, so every
-  security header would vanish from exactly the responses carrying the
-  application code. Asset caching belongs in front of the app.
-
-`build.assetsInlineLimit` is 0 in `vite.config.js` for this policy's sake. The
-default inlines assets under 4 kB as data: URIs, which pulled one brand woff2
-face into the stylesheet and forced `font-src` to accept `data:`. Emitting every
-asset as a file costs one extra HTTP/2 request and buys a policy with no data:
-source in it.
-
-Verified in Chromium against the real nginx config: the full round trip runs
-with zero CSP violations, all 15 font faces load, and inline style attributes
-still apply.
-
-## Project layout
-
-```
-src/
-├── App.jsx                    # reads the hash, picks the view
-├── App.test.jsx               # end-to-end guard: no state crosses cards
-├── constants.js               # limits, question kinds, delivery styles
-├── index.css                  # imports tailwind, brand tokens, app layer
-├── assets/
-│   └── semper-mark.png        # emblem, cream backdrop keyed to transparency
-├── styles/
-│   ├── semper-tokens.css      # MIRROR of the v1.2 brand tokens — read-only
-│   └── justasking.css         # this app's layer, in terms of those tokens
-├── components/
-│   ├── Layout.jsx             # page shell, header and footer
-│   ├── BrandHeader.jsx        # emblem, wordmark, light/dark control
-│   ├── BrandFooter.jsx        # scarlet rule, disclaimer, build stamp
-│   ├── QuestionEditor.jsx     # one question in the creator's draft
-│   ├── Delivery.jsx           # holds the questions until the reader opens it
-│   ├── DeliveryStage.jsx      # the scenery, shared with the preview
-│   ├── DeliveryPreview.jsx    # what the sender is choosing, to scale
-│   ├── ShareLink.jsx          # read-only link field with copy button
-│   ├── CardCreator.jsx        # build a card, generate a link
-│   ├── CardViewer.jsx         # answer a card, generate the reply link
-│   └── CardResult.jsx         # show the answer that came back
-├── lib/
-│   └── app-links.js           # external destinations, in one place
-├── hooks/
-│   ├── useColorScheme.js      # dark default, light toggle, persisted
-│   └── useCopyToClipboard.js  # clipboard write with an execCommand fallback
-└── utils/
-    ├── formatAnswer.js        # renders stored answers, dates to locale
-    ├── urlState.js            # encode / decode / sanitize the payload
-    └── urlState.test.js       # sanitizer, decoder, and URL budget invariants
-```
-
-## Branding
-
-The visual system is inherited, not owned. `src/styles/semper-tokens.css` is a
-byte-for-byte mirror of the v1.2 token set in
-[SemperAdminPortal](https://github.com/SemperAdmin/SemperAdminPortal) and is
-treated as read-only: when a token changes it changes there and is re-mirrored
-here, never the reverse. Everything specific to this app lives in
-`src/styles/justasking.css` and is written in terms of those tokens rather than
-in new hex values.
-
-What that buys, from the style guide:
-
-- **Dark navy by default**, light parchment as the secondary toggle. The choice
-  is remembered per reader and is deliberately *not* encoded in the card URL —
-  it is the reader's preference, not the sender's to impose.
-- **One display surface per fold.** Bebas Neue is rare and load-bearing: the
-  hero on the creator, and the answer on the result — sized like the guide's
-  stat-tile numeral, stepping down as the answer gets longer. A multi-question
-  card lists its answers instead: stacking hero numerals would leave nothing for
-  the eye to land on. Questions stay in Inter, because a 160-character question
-  set in condensed all-caps is not readable.
-- **Self-hosted faces.** Inter, JetBrains Mono and Bebas Neue ship with the
-  build, so there is no font request to a third party at runtime.
-
-The one derived value is the admin green's dark-mode variant, which the guide
-does not name. It is produced with `color-mix()` from `--color-role-admin`
-rather than hardcoded, so it tracks the token instead of becoming a sixth hex
-the style guide does not own.
-
-## Delivery styles
-
-The sender picks how the card arrives, and that is what the recipient meets
-before any question appears:
-
-| `t` | Style | Signature | Runs for |
-| --- | --- | --- | --- |
-| `env` | Sealed dispatch | Wax cracks, flap swings, letter slides out | 1180ms |
-| `stamp` | Stamped orders | A stamp lands hard and jolts the page | 940ms |
-| `wire` | Field transmission | A scan line crosses a dark panel, signal bars find strength | 1020ms |
-| `scroll` | Unrolled orders | The cord parts and the scroll unrolls between its rods | 1060ms |
-
-Four distinct motion signatures — a hinge and slide, an impact, an electronic
-scan, an unroll — so they read as different arrivals rather than recolours.
-
-This slot used to hold a role accent (marine / leader / commander / admin). It
-only ever re-pointed `--color-primary`, and the label was never shown to the
-person receiving the card, so the meaning stayed in the sender's head. It was
-borrowed from SemperAdminPortal, where the accent earns its place because the
-portal has role-differentiated *content*; JustAsking has none, so it was
-decoration wearing a semantic costume. The accent is now the brand primary
-throughout.
-
-The creator previews the selected style, so a sender is not choosing between
-four things by name alone and first seeing the result when they open their own
-link. Selecting a style replays it; arriving on the page does not, since an
-animation nobody asked for on load is what the motion budget exists to prevent.
-The preview holds its final frame rather than fading out — the end state is the
-part worth seeing — and shares its scenery with the real delivery through
-`DeliveryStage`, so the two cannot drift.
-
-Scenery is sized in `cqw`, percent of the stage's own width, because the
-creator's stage is smaller than the recipient's. With fixed sizes the seal came
-out oversized in the preview and the stamp wrapped onto two lines there but one
-at full size; a preview that is not to scale is worth less than no preview.
-
-Each style declares its own duration in `constants.js`, and that number has to
-stay in step with the CSS. Every animated element also declares `--dur`
-alongside its animation, which is what lets the reduced-motion opt-in re-enable
-all four sequences with a single rule instead of restating durations style by
-style.
-
-### The one motion exception
-
-The recipient's card arrives sealed. Breaking the wax cracks the seal, swings
-the flap back, and slides the letter up out of the envelope — about **1.2s**,
-against the guide's §8 cap of 240ms and its "no page-transition theater"
-principle.
-
-The envelope is built from four stacked pieces — back panel, letter, front
-panel, flap — so the letter has somewhere to come from. Without that the flap
-opened onto a blank slab and nothing appeared to leave the envelope, which is
-the difference between motion and a state change.
-
-This is a deliberate exception, recorded here rather than quietly taken. The
-argument for it:
-
-- The cap exists for **incidental** motion — route changes and chrome, things
-  standing between a reader and what they came for. This is not incidental. It
-  is the single beat the product exists for: someone was asked something.
-- It is **user-initiated**. Nothing animates on arrival; the sequence runs only
-  when the recipient taps "Break the seal".
-- It happens **once**, on one view, and never on the sender's side.
-
-Everything else in the app stays inside the budget.
-
-#### It also overrides `prefers-reduced-motion`
-
-The sequence plays by default for everyone, including devices asking for
-reduced motion. This is the product owner's call, taken knowingly, and it is
-the part of this app most worth revisiting.
-
-The case for it: most people with the setting on have it on for battery or
-taste, this is one user-initiated beat rather than motion imposed on the way
-somewhere, and the seal is the product's only moment of delight.
-
-The case against it, which is not nothing: the setting also exists for people
-whose vestibular disorders or migraines are triggered by animation, and for
-them a media query is not a preference but an accommodation. Overriding it by
-default is normally poor practice, and it is worth changing your mind about if
-anyone ever reports feeling ill.
-
-So it is an override, not a dismissal. A reader whose device asked for less
-motion is told the card animates and given one tap to turn it off, and that
-choice is remembered in `localStorage` so they never sit through it twice.
-Readers who did not ask for reduced motion are shown no control at all.
-
-Letting the sequence run on those devices takes some force: the brand token
-mirror ships a universal
-`*, *::before, *::after { animation-duration: 0.01ms !important }`. That rule
-is correct as a default and the mirror is read-only, so it is beaten the only
-way an `!important` on a universal selector can be — an `!important` on a more
-specific one, in the `[data-motion='play']` block at the end of
-`justasking.css`. Its durations are restated there and have to stay in step
-with the sequence.
-
-## Outbound links
-
-Two, both deliberate, and neither one a network call the app makes on its own.
-
-**Send feedback** in the footer opens an externally hosted form in a new tab —
-the same `FEEDBACK_URL` SemperScribe and the portal use, kept in
-`src/lib/app-links.js` so a destination change is a one-line edit. Nothing about
-the open card goes with it: not the questions, not the answers, not the current
-URL. Prefilling any of that would hand somebody's card to a third party, which
-is the one promise this app makes. A test asserts the app issues **no** requests
-off-origin.
-
-**Watch the walkthrough** appears on the creator, and **How it works** in the
-footer. Both are a poster and a link, never an embed. An iframe would contact a
-third party on page load — before anyone asked for a video — on a page whose
-footer promises nothing is stored; a poster costs no network at all until the
-tap. The video itself is not in this repo: it lives on one canonical host, and
-the app holds only a link and a local still. That follows the convention the
-portal settled on after its 2026-08 video audit, whose finding was *"three
-conventions for the same asset — pick one canonical host."*
-
-Both controls render nothing until `WALKTHROUGH.url` is set in
-`src/lib/app-links.js`, so a half-configured build shows no feature rather than
-a dead link. The poster is optional and separate: drop a 16:9 still at
-`public/walkthrough-poster.jpg` and set `hasPoster` to true. Until then a plain
-panel sits behind the play badge, so the walkthrough goes live without waiting
-on artwork. The poster must stay local — the deployed CSP is `img-src 'self'`,
-which would block a thumbnail pulled from the video host.
-
-The walkthrough is on `portal.mcele.usmc.mil`, so a reader on a personal device
-or off-network may not be able to reach it. That is a property of the host, not
-of this app — the same caveat as the feedback form. The walkthrough is on the
-creator only — the recipient has one job, and a tutorial is not it.
-
-**Make your own card**, on the recipient's review step, points at the app with
-no fragment. The recipient is the person most likely not to know this app yet,
-so that is where the invitation belongs. It opens in a new tab on purpose: their
-current tab holds a reply link that nothing else has a copy of, and navigating
-away from it would lose it for good.
-
-Note that the feedback form is on a `.mil` host, which a recipient on a personal
-device or off-network may not be able to reach. That is a property of the
-destination, not of this app.
-
-## Handling untrusted links
-
-Everything in the hash is attacker-controlled — anyone can hand-craft a link —
-so `sanitizeState()` in `src/utils/urlState.js` is the gate that all decoded
-payloads pass through. It:
-
-- rejects non-strings and coerces everything else to bounded, single-line text
-- strips control characters, and clips text to the documented limits
-- drops any question with no prompt, and any choice with no options — without
-  sinking the rest of the card
-- drops a card with nothing answerable left in it
-- ignores an unrecognized role accent or kind and falls back
-- **discards a choice answer that is not one of that question's own options**,
-  so a tampered link cannot show the sender a reply the recipient never gave
-- **discards a date that is not a real calendar date**, so a hand-edited link
-  cannot claim someone picked 31 February
-
-Rendered text is only ever passed to React as a child, never through
-`dangerouslySetInnerHTML`, so markup in a payload displays as literal text.
-
-A hash that fails to decode — the usual cause is a chat client truncating a long
-link — falls back to the creator with a short explanation instead of a blank
-screen.
-
-## Caveats
-
-Putting the card in the URL is what makes this work without a backend, and it
-is also the whole of its threat model. Be clear-eyed about it:
-
-- **The link is the data.** Anyone who holds it can read the question and the
-  answer. Links leak — through chat backups, screenshots, browser history, and
-  anyone the recipient forwards it to.
-- **The answer is not attributable.** The recipient can edit their own reply
-  before sending it back. `sanitizeState()` stops a reply that was never on the
-  card's option list, but it cannot tell you *who* clicked, and nothing is
-  signed. An answer here is a convenience, not a record.
-- **No PII, no official business.** Do not put names, EDIPIs, medical or legal
-  matters, or anything close to a formal request or endorsement into a card.
-  This is a quick informal poll, not a system of record, and it is not a
-  substitute for any process that has one.
-
-There is no authentication because there is no server. That is a deliberate
-trade, not an oversight — but it means the tool has to stay on the low-stakes
-side of the line.
+One of the tools in the Semper Admin suite. Start at the
+[Semper Admin Portal](https://semper-admin-portal.app.cloud.gov) for the
+full set.
